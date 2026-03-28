@@ -12,6 +12,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -56,12 +57,26 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -196,6 +211,7 @@ class MainActivity : ComponentActivity() {
 private fun YamaokayaScreen() {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
+    val view = LocalView.current
     val fusedClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
     var hasPermission by remember { mutableStateOf(hasLocationPermission(context)) }
@@ -207,6 +223,7 @@ private fun YamaokayaScreen() {
     var showInfoPage by remember { mutableStateOf(false) }
     var showStampRally by remember { mutableStateOf(false) }
     var showAccountSettings by remember { mutableStateOf(false) }
+    var showShareDialog by remember { mutableStateOf(false) }
     var previouslyInsideRadius by remember { mutableStateOf<Boolean?>(null) }
     val stampRepository = remember { StampRepository(context) }
     val accountRepository = remember { AccountRepository(context) }
@@ -223,6 +240,8 @@ private fun YamaokayaScreen() {
             .filter { it != 0 }
     }
     val appVersion = remember { getAppVersionName(context) }
+    var updateInfo by remember { mutableStateOf<UpdateChecker.UpdateInfo?>(null) }
+    var showUpdateDialog by remember { mutableStateOf(true) }
     val latestShopState = rememberUpdatedState(nearestShop)
     val latestProfileState = rememberUpdatedState(accountProfile)
 
@@ -268,6 +287,29 @@ private fun YamaokayaScreen() {
                 .times(1000L)
             delay(waitMs)
         }
+    }
+
+    // アップデートチェック
+    LaunchedEffect(Unit) {
+        val info = UpdateChecker.checkForUpdate(context)
+        if (info != null) {
+            updateInfo = info
+            showUpdateDialog = true
+        }
+    }
+
+    // アップデートダイアログ
+    if (updateInfo != null && showUpdateDialog) {
+        UpdateAvailableDialog(
+            updateInfo = updateInfo!!,
+            onUpdate = {
+                uriHandler.openUri(updateInfo!!.releaseUrl)
+                showUpdateDialog = false
+            },
+            onDismiss = {
+                showUpdateDialog = false
+            }
+        )
     }
 
     if (showAccountSettings) {
@@ -379,38 +421,51 @@ private fun YamaokayaScreen() {
                 .padding(top = 24.dp)
         )
 
-        Row(
+        Column(
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 24.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+                .align(Alignment.TopEnd)
+                .padding(top = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.End
         ) {
-            Box(
+            IconButton(
+                onClick = { showStampRally = true },
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(48.dp)
                     .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                    .clickable { showStampRally = true }
             ) {
-                Text(
-                    text = "★",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.Center)
+                Icon(
+                    imageVector = Icons.Filled.Star,
+                    contentDescription = "スタンプラリー",
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
 
-            Box(
+            if (nearestShop != null) {
+                IconButton(
+                    onClick = { showShareDialog = true },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Share,
+                        contentDescription = "シェアする",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            IconButton(
+                onClick = { showInfoPage = true },
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(48.dp)
                     .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                    .clickable { showInfoPage = true }
             ) {
-                Text(
-                    text = "i",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.Center)
+                Icon(
+                    imageVector = Icons.Filled.Info,
+                    contentDescription = "インフォメーション",
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -653,6 +708,7 @@ private fun YamaokayaScreen() {
                 .padding(bottom = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
@@ -687,8 +743,12 @@ private fun YamaokayaScreen() {
                 )
             }
             Text(
-                text = "Version $appVersion",
-                style = MaterialTheme.typography.labelMedium
+                text = "Ver ${appVersion.removePrefix("V.")}",
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.clickable {
+                    uriHandler.openUri("https://github.com/koba9813/yamaokaya/releases")
+                }
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -696,6 +756,57 @@ private fun YamaokayaScreen() {
                 style = MaterialTheme.typography.labelMedium
             )
         }
+    }
+
+    if (showShareDialog && nearestShop != null) {
+        val message = createShareMessage(nearestShop)
+        val url = "https://koba9813.github.io/yamaokaya/"
+        AlertDialog(
+            onDismissRequest = { showShareDialog = false },
+            title = {
+                Text("距離を共有する", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(
+                        onClick = {
+                            shareToLine(context, view, uriHandler, message, url)
+                            showShareDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF06C755)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("LINE", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                    Button(
+                        onClick = {
+                            shareToTwitter(context, uriHandler, view, message, url)
+                            showShareDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("X (Twitter)", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                    Button(
+                        onClick = {
+                            shareToInstagram(context, view, message, url)
+                            showShareDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE1306C)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Instagram", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showShareDialog = false }) {
+                    Text("閉じる")
+                }
+            }
+        )
     }
 }
 
@@ -743,43 +854,54 @@ private fun StampRallyScreen(
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
-            Text(
-                text = "✕ 閉じる",
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.clickable { onClose() }
-            )
+            IconButton(
+                onClick = onClose,
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "閉じる",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "$visitedCount / ${shopNames.size}",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "店舗達成",
-                    style = MaterialTheme.typography.labelMedium
-                )
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "$totalCheckIns",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "総チェックイン",
-                    style = MaterialTheme.typography.labelMedium
-                )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "$visitedCount / ${shopNames.size}",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "店舗達成",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "$totalCheckIns",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "総チェックイン",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
             }
         }
 
@@ -793,82 +915,85 @@ private fun StampRallyScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        ranking.forEachIndexed { index, (name, count) ->
-            val isVisited = count > 0
-            val rankLabel = when {
-                !isVisited -> "　"
-                index == 0 -> "🥇"
-                index == 1 -> "🥈"
-                index == 2 -> "🥉"
-                else -> "${index + 1}位"
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = rankLabel,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.width(44.dp)
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = if (isVisited) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isVisited) MaterialTheme.colorScheme.onSurface
-                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    )
-                    if (isVisited) {
-                        val stampStr = "🍜".repeat(minOf(count, 5)) +
-                            if (count > 5) "+${count - 5}" else ""
-                        Text(
-                            text = stampStr,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            )
+        ) {
+            Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                ranking.forEachIndexed { index, (name, count) ->
+                    val isVisited = count > 0
+                    val rankLabel = when {
+                        !isVisited -> "　"
+                        index == 0 -> "🥇"
+                        index == 1 -> "🥈"
+                        index == 2 -> "🥉"
+                        else -> "${index + 1}位"
                     }
-                }
-                if (isVisited) {
-                    Box(
+
+                    Row(
                         modifier = Modifier
-                            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp, horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "${count}回",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            fontWeight = FontWeight.Bold
+                            text = rankLabel,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.width(44.dp)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (isVisited) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isVisited) MaterialTheme.colorScheme.onSurface
+                                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            )
+                            if (isVisited) {
+                                val stampStr = "🍜".repeat(minOf(count, 5)) +
+                                    if (count > 5) "+${count - 5}" else ""
+                                Text(
+                                    text = stampStr,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                        }
+                        if (isVisited) {
+                            Box(
+                                modifier = Modifier
+                                    .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(16.dp))
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "${count}回",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = "未訪問",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            )
+                        }
+                    }
+
+                    if (index < ranking.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         )
                     }
-                } else {
-                    Text(
-                        text = "未訪問",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    )
                 }
             }
-
-            Spacer(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant)
-            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = onClose,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("戻る")
-        }
     }
 }
 
@@ -1016,11 +1141,13 @@ private fun AccountSettingsPage(
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
-            Text(
-                text = "✕ 閉じる",
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.clickable { onClose() }
-            )
+            IconButton(onClick = onClose) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "閉じる",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -1102,35 +1229,71 @@ private fun InformationPage(
             .padding(20.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Text(
-            text = "Information",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Yamaokaya is Dokoは、最寄りの山岡家までの距離と方角を示すアプリです。",
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.SemiBold
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text("・ラーメン、または餃子の上側が向く方向が最寄り店舗です")
-        Text("・ラーメン画像をタップすると何かが起こるかも...? ")
-        Text("・距離表示と方角はリアルタイムで更新されます")
-        Text("・LINE / Instagram / Twitter で共有できます")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Information",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+            IconButton(
+                onClick = onClose,
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "閉じる",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Button(
-            onClick = onClose,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("戻る")
+        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Yamaokaya is Dokoは、最寄りの山岡家までの距離と方角を示すアプリです。",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("ラーメン等の上側が向く方向が最寄り店舗です", style = MaterialTheme.typography.bodyMedium)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("ラーメン画像をタップすると何かが起こるかも...?", style = MaterialTheme.typography.bodyMedium)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("距離表示と方角はリアルタイムで更新されます", style = MaterialTheme.typography.bodyMedium)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.Share, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("LINE / Instagram / X で共有できます", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -1281,10 +1444,26 @@ private fun shareToPackageWithOptionalScreenshot(
 
 private fun captureScreenshotUri(context: Context, sourceView: View): Uri? {
     return try {
-        val bitmap = sourceView.drawToBitmap()
+        val fullBitmap = sourceView.drawToBitmap()
+        
+        // 画面幅に合わせて正方形にトリミング
+        val cropSize = fullBitmap.width
+        val startX = 0
+        // 画面の上下中央よりやや上くらいにコンテンツがあると想定し、少し上から切り出す
+        val startY = Math.max(0, (fullBitmap.height - cropSize) / 2 - 100)
+        val actualHeight = Math.min(cropSize, fullBitmap.height - startY)
+        
+        val croppedBitmap = Bitmap.createBitmap(fullBitmap, startX, startY, cropSize, actualHeight)
+        
+        // 背景を白色に塗りつぶすための新しいBitmap
+        val finalBitmap = Bitmap.createBitmap(cropSize, actualHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(finalBitmap)
+        canvas.drawColor(android.graphics.Color.WHITE)
+        canvas.drawBitmap(croppedBitmap, 0f, 0f, null)
+
         val file = File(context.cacheDir, "share_yamaokaya.png")
         FileOutputStream(file).use { out ->
-            bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
+            finalBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
         }
         FileProvider.getUriForFile(
             context,
@@ -1495,4 +1674,92 @@ private fun hasLocationPermission(context: Context): Boolean {
     ) == PackageManager.PERMISSION_GRANTED
 
     return fine || coarse
+}
+
+@Composable
+private fun UpdateAvailableDialog(
+    updateInfo: UpdateChecker.UpdateInfo,
+    onUpdate: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "🎉",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                Text(
+                    text = "アップデートがあります",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        text = {
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            RoundedCornerShape(8.dp)
+                        )
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "最新バージョン",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = updateInfo.latestVersion,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Text(
+                        text = "→",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                if (updateInfo.releaseNotes.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "リリースノート:",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = updateInfo.releaseNotes.take(300) +
+                            if (updateInfo.releaseNotes.length > 300) "…" else "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onUpdate
+            ) {
+                Text("アップデートする")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("あとで")
+            }
+        }
+    )
 }
