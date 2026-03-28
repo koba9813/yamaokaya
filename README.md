@@ -1,8 +1,8 @@
 
 
-# Yamaokaya is Doko? （V.beta1.0）
+# Yamaokaya is Doko? （V.beta1.1）
 
-現在地から最寄りの「山岡家」までの距離と方角を表示するAndroidアプリ（V.beta1.0）です。
+現在地から最寄りの「山岡家」までの距離と方角を表示するAndroidアプリ（V.beta1.1）です。
 
 ---
 
@@ -10,7 +10,7 @@
 
 下記より最新版APKを直接ダウンロードできます。
 
-👉 [Yamaokaya_V.beta1.0.apk](app/release/Yamaokaya_beta3.1.apk)
+👉 [Yamaokaya_V.beta1.1.apk](app/release/Yamaokaya_V.beta1.1.apk)
 
 ---
 
@@ -28,6 +28,9 @@
 - 画面中央の矢印が店舗方向を指し示す
 - 最寄り店舗までの距離を常時通知（バックグラウンド対応）
 - 10m/50m以内で特別な演出
+- 訪問履歴を残せる「スタンプラリー（チェックイン）」機能
+- 店舗までの距離を簡単に共有できる「SNSシェア（LINE, X, Instagram）」機能
+- アプリ内からのメニュー確認機能
 
 ---
 
