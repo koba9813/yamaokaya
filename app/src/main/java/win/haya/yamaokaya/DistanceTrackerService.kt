@@ -95,7 +95,7 @@ class DistanceTrackerService : Service() {
 
     private fun formatDistanceText(nearest: ShopInfo?): String {
         return if (nearest == null) {
-            "No shop within 100km"
+            "No shop found"
         } else if (nearest.distanceMeters < 1000f) {
             "${"%.0f".format(nearest.distanceMeters)} m"
         } else {

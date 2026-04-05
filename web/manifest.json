@@ -1,0 +1,17 @@
+{
+  "name": "Yamaokaya is Doko",
+  "short_name": "Yamaokaya",
+  "description": "最寄りの山岡家への距離と方位を表示します。",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fdfdfd",
+  "theme_color": "#C62828",
+  "icons": [
+    {
+      "src": "img/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

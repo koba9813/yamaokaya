@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Yamaokaya is Doko</title>
+    <!-- PWA Settings -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#C62828">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="img/icon.png">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app" class="container">
+        <!-- Init/Permission Overlay -->
+        <div id="permission-overlay" class="overlay">
+            <div class="overlay-content">
+                <p>位置情報を使って最寄り店舗を検索します。</p>
+                <button id="btn-request-permission" class="btn-primary">位置情報を許可して検索</button>
+            </div>
+        </div>
+
+        <!-- Koko Top Title -->
+        <h1 id="title-text">Yamaokaya is Doko</h1>
+
+        <div class="header-icons">
+            <!-- Share icon only (others abolished) -->
+            <button class="icon-btn" id="btn-share" aria-label="シェアする" style="display: none;">
+                <span class="material-icons">share</span>
+            </button>
+        </div>
+
+        <!-- Center Content Box -->
+        <div class="center-content">
+            <!-- Loading View -->
+            <div id="loading-view" class="view" style="display: none;">
+                <div class="spinner"></div>
+                <p>検索中...</p>
+            </div>
+            
+            <!-- Error View -->
+            <div id="error-view" class="view" style="display: none;">
+                <p id="error-message">エラー: 検索に失敗しました。</p>
+                <button id="btn-retry" class="btn-primary">再試行</button>
+            </div>
+
+            <!-- Distance and Direction View -->
+            <div id="distance-view" class="view" style="display: none;">
+                <div id="koko-special-announcement" class="koko-box" style="display: none;">
+                   <h2 id="koko-shop-name"></h2>
+                   <p class="koko-caption">もう山岡家は目の前！さあ、何を食べる？</p>
+                </div>
+
+                <h2 id="distance-text" class="distance-display">-- km</h2>
+                
+                <div class="image-wrapper">
+                    <img id="direction-image" src="img/yamaokaya.png" alt="山岡家の方向">
+                </div>
+                
+                <div id="action-buttons-container" style="display: none;">
+                    <button id="btn-action" class="btn-primary">チェックイン</button>
+                    <p id="feedback-message" class="feedback-text" style="display: none;"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Footer -->
+        <div class="footer">
+            <div class="footer-row">
+                <a href="https://www.yamaokaya.com/" target="_blank" class="footer-link">山岡家公式サイト</a>
+            </div>
+            <div class="footer-row">
+                <span class="copyright-text">(c) 2026 </span>
+                <a href="https://haya.win" target="_blank" class="footer-link">Koba_9813</a>
+            </div>
+            <div class="footer-row">
+                <a href="https://github.com/koba9813/yamaokaya/releases" target="_blank" class="footer-link">Ver Web</a>
+            </div>
+            <div class="footer-row disclaimer-row">
+                <span class="disclaimer">本アプリは山岡家の公式アプリではなく、非公認のアプリです</span>
+            </div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>

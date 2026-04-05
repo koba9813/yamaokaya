@@ -113,6 +113,9 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import androidx.compose.material3.Typography
+import android.widget.TextView
+import androidx.compose.ui.viewinterop.AndroidView
+import io.noties.markwon.Markwon
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.PI
@@ -378,7 +381,7 @@ private fun YamaokayaScreen() {
                     nearestShop = nearest
                     isLoading = false
                     errorMessage = if (nearest == null) {
-                        "100km以内に山岡家が見つかりませんでした。"
+                        "山岡家が見つかりませんでした。"
                     } else {
                         null
                     }
@@ -1586,12 +1589,11 @@ private fun getAppVersionName(context: Context): String {
 }
 
 object YamaokayaFinder {
-    private const val SEARCH_RADIUS_METERS = 100_000f
 
     private val registeredShops = listOf(
         Coordinates(36.397650673276345, 140.50535377876412) to "山岡家 ひたちなか店",
         Coordinates(36.366183045752884, 140.48297166948979) to "山岡家 水戸城南店",
-        Coordinates(36.537558996534784, 140.63643157503827) to "山岡家 日立金沢店",
+        Coordinates(36.537558996534784, 140.63643157503827) to "山岡家 日立東金沢店",
         Coordinates(36.537658129508564, 140.41588693877145) to "山岡家 常陸大宮店",
         Coordinates(36.377374656642665, 140.3608206027508) to "山岡家 水戸内原店",
         Coordinates(36.31298564606419, 140.44880778716356) to "山岡家 水戸南店",
@@ -1601,7 +1603,11 @@ object YamaokayaFinder {
         Coordinates(36.07663120071107, 140.1059249155306) to "山岡家 つくば中央店",
         Coordinates(36.04915550750586, 140.0848427526962) to "山岡家 谷田部店",
         Coordinates(35.99932258990889, 140.1533127114314) to "山岡家 牛久店",
-        Coordinates(35.915208766063834, 140.63690426791038) to "山岡家 神栖店"
+        Coordinates(35.915208766063834, 140.63690426791038) to "山岡家 神栖店",
+        Coordinates(36.287529, 139.883736) to "山岡家 新結城店",
+        Coordinates(35.960660, 139.986108) to "山岡家 守谷店",
+        Coordinates(36.348665, 140.052345) to "山岡家 岩瀬店",
+        Coordinates(36.041131, 140.208893) to "山岡家 阿見店"
     )
 
     fun findNearest(current: Coordinates): ShopInfo? {
@@ -1609,8 +1615,6 @@ object YamaokayaFinder {
 
         for ((coords, name) in registeredShops) {
             val distance = calculateDistanceMeters(current, coords)
-            if (distance > SEARCH_RADIUS_METERS) continue
-
             val bearing = calculateBearing(current, coords)
             val candidate = ShopInfo(
                 name = name,
@@ -1740,11 +1744,14 @@ private fun UpdateAvailableDialog(
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = updateInfo.releaseNotes.take(300) +
-                            if (updateInfo.releaseNotes.length > 300) "…" else "",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    AndroidView(
+                        factory = { ctx -> TextView(ctx) },
+                        update = { textView ->
+                            val markwon = Markwon.create(textView.context)
+                            val note = updateInfo.releaseNotes.take(300) +
+                                if (updateInfo.releaseNotes.length > 300) "…" else ""
+                            markwon.setMarkdown(textView, note)
+                        }
                     )
                 }
             }

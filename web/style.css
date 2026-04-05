@@ -1,0 +1,282 @@
+:root {
+    /* MD3 Light Theme Defaults */
+    --md-sys-color-primary: #D02B21; /* Red-ish typical of ramen maybe, but let's use a generic generic MD3 primary or orange */
+    /* Wait, Yamaokaya color is red */
+    --md-sys-color-primary: #C62828; 
+    --md-sys-color-on-primary: #ffffff;
+    --md-sys-color-primary-container: #ffdad5;
+    --md-sys-color-on-primary-container: #410001;
+    --md-sys-color-surface: #fbfdf8;
+    --md-sys-color-on-surface: #191c19;
+    --md-sys-color-surface-variant: #e0e2ec;
+    --md-sys-color-on-surface-variant: #44474e;
+    --md-sys-color-error: #ba1a1a;
+    
+    --bg-color: #fdfdfd;
+    --text-color: #1c1b1f;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* MD3 Dark Theme Defaults */
+        --md-sys-color-primary: #ffb4ab;
+        --md-sys-color-on-primary: #690003;
+        --md-sys-color-primary-container: #930006;
+        --md-sys-color-on-primary-container: #ffdad5;
+        --md-sys-color-surface: #191c19;
+        --md-sys-color-on-surface: #e2e3df;
+        --md-sys-color-surface-variant: #44474e;
+        --md-sys-color-on-surface-variant: #c4c6d0;
+        --md-sys-color-error: #ffb4ab;
+
+        --bg-color: #121212;
+        --text-color: #e6e1e5;
+    }
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Zen Maru Gothic', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden; /* App like */
+    -webkit-font-smoothing: antialiased;
+}
+
+.container {
+    padding: 20px;
+    width: 100%;
+    max-width: 500px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+/* Title */
+#title-text {
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 28px;
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+    z-index: 10;
+}
+
+/* Header Icons */
+.header-icons {
+    position: absolute;
+    top: 24px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 10;
+}
+
+.icon-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-primary);
+    border: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    transition: background-color 0.2s;
+}
+
+.icon-btn:active {
+    background-color: var(--md-sys-color-primary-container);
+}
+
+.icon-btn .material-icons {
+    font-size: 24px;
+}
+
+/* Center Content */
+.center-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.spinner {
+    border: 4px solid var(--md-sys-color-surface-variant);
+    border-top: 4px solid var(--md-sys-color-primary);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 12px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.btn-primary {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border: none;
+    border-radius: 100px; /* Fully rounded */
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'Zen Maru Gothic', sans-serif;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.btn-primary:active {
+    opacity: 0.8;
+}
+
+.koko-box {
+    width: 100%;
+    border: 2px solid var(--md-sys-color-primary);
+    border-radius: 20px;
+    padding: 24px 20px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.koko-box h2 {
+    font-size: 28px;
+    font-weight: 900;
+    margin-bottom: 10px;
+}
+
+.koko-caption {
+    font-size: 16px;
+    color: var(--md-sys-color-primary);
+    font-weight: 700;
+}
+
+.distance-display {
+    font-size: 45px;
+    font-weight: 900; /* ExtraBold */
+    margin-bottom: 16px;
+}
+
+.image-wrapper {
+    margin: 16px 0;
+    position: relative;
+    width: 280px;
+    height: 280px;
+}
+
+#direction-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /* transition: transform 0.1s linear; */ /* Smoothness handled by JS RAf */
+    cursor: pointer;
+    will-change: transform;
+}
+
+/* Footer */
+.footer {
+    position: absolute;
+    bottom: 8px;
+    left: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 12px;
+}
+
+.footer-row {
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+}
+
+.footer-link {
+    color: var(--md-sys-color-primary);
+    text-decoration: none;
+    font-size: 14px;
+}
+.copyright-text {
+    font-size: 12px;
+}
+
+.disclaimer-row {
+    margin-top: 8px;
+}
+
+.disclaimer {
+    font-size: 12px;
+}
+
+/* Overlays */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--bg-color);
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.overlay-content {
+    text-align: center;
+    padding: 20px;
+}
+
+.overlay-content p {
+    margin-bottom: 12px;
+}
+
+#action-buttons-container {
+    width: 100%;
+    margin-top: 24px;
+}
+
+.btn-large {
+    width: 100%;
+    height: 56px;
+    font-size: 16px;
+}
+
+.feedback-text {
+    margin-top: 10px;
+    color: var(--md-sys-color-error);
+    font-size: 14px;
+}
