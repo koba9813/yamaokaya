@@ -68,6 +68,45 @@ object UpdateChecker {
         }
     }
 
+    /**
+     * 最新リリース情報を常に返す（バージョン比較なし）。
+     * エラー時は null。
+     */
+    suspend fun fetchLatestRelease(@Suppress("UNUSED_PARAMETER") context: Context): UpdateInfo? =
+        withContext(Dispatchers.IO) {
+            try {
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(10, TimeUnit.SECONDS)
+                    .readTimeout(10, TimeUnit.SECONDS)
+                    .build()
+
+                val request = Request.Builder()
+                    .url(GITHUB_API_URL)
+                    .header("Accept", "application/vnd.github.v3+json")
+                    .build()
+
+                val response = client.newCall(request).execute()
+                if (!response.isSuccessful) return@withContext null
+
+                val body = response.body?.string() ?: return@withContext null
+                val json = JSONObject(body)
+
+                val tagName = json.optString("tag_name", "")
+                val htmlUrl = json.optString("html_url", "")
+                val releaseNotes = json.optString("body", "")
+
+                if (tagName.isBlank()) return@withContext null
+
+                UpdateInfo(
+                    latestVersion = tagName,
+                    releaseUrl = htmlUrl,
+                    releaseNotes = releaseNotes
+                )
+            } catch (_: Exception) {
+                null
+            }
+        }
+
     private fun getAppVersionName(context: Context): String {
         return try {
             @Suppress("DEPRECATION")
