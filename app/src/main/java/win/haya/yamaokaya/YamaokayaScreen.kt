@@ -5,9 +5,6 @@ import android.annotation.SuppressLint
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,13 +34,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,8 +52,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.android.gms.location.LocationServices
-import kotlinx.coroutines.launch
 
 private const val KOKO_RADIUS_METERS = 50f
 private const val SPECIAL_EFFECT_RADIUS_METERS = 50f
@@ -74,9 +67,7 @@ internal fun YamaokayaScreen(
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val view = LocalView.current
-    val scope = rememberCoroutineScope()
 
-    val fusedClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     var hasPermission by remember { mutableStateOf(hasLocationPermission(context)) }
     var isLoading by remember { mutableStateOf(hasPermission) }
     val stampRepository = remember { StampRepository(context) }
@@ -88,7 +79,6 @@ internal fun YamaokayaScreen(
     var showStampRally by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var showShareDialog by remember { mutableStateOf(false) }
-    var showUpdateDialog by remember { mutableStateOf<UpdateChecker.UpdateInfo?>(null) }
     var checkInFeedbackMessage by remember { mutableStateOf<String?>(null) }
     var previouslyInsideRadius by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -105,21 +95,14 @@ internal fun YamaokayaScreen(
 
     val shopNames = remember { YamaokayaFinder.getShopNames() }
 
-    // Check for updates
-    LaunchedEffect(Unit) {
-        val updateInfo = UpdateChecker.checkForUpdate(context)
-        if (updateInfo != null) {
-            showUpdateDialog = updateInfo
-        }
-    }
-
     // Location & heading updates
     DisposableEffect(appSettings, hasPermission) {
         var stopLocation: (() -> Unit)? = null
         var stopHeading: (() -> Unit)? = null
 
         if (hasPermission) {
-            stopLocation = fusedClient.startRealtimeLocationUpdates(
+            stopLocation = startLocationUpdates(
+                context = context,
                 onLocation = { location ->
                     val current = Coordinates(location.latitude, location.longitude)
                     val nearest = YamaokayaFinder.findNearest(current)
@@ -150,18 +133,6 @@ internal fun YamaokayaScreen(
             stopLocation?.invoke()
             stopHeading?.invoke()
         }
-    }
-
-    // Update dialog
-    showUpdateDialog?.let { updateInfo ->
-        UpdateAvailableDialog(
-            updateInfo = updateInfo,
-            onUpdate = {
-                uriHandler.openUri(updateInfo.releaseUrl)
-                showUpdateDialog = null
-            },
-            onDismiss = { showUpdateDialog = null }
-        )
     }
 
     // Sub-page navigation

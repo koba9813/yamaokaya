@@ -2,8 +2,6 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
-    // Add the Google services Gradle plugin
-    id("com.google.gms.google-services")
 }
 
 android {
@@ -79,23 +77,10 @@ dependencies {
     // AndroidX Core
     implementation("androidx.core:core-ktx:1.13.1")
 
-    // Google Play Services Location
-    implementation("com.google.android.gms:play-services-location:21.3.0")
-
-    // OkHttp
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-
     // Kotlin Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
-    // Firebase BoM (Kotlin 2.0.0 互換バージョン)
-    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
-    implementation("com.google.firebase:firebase-analytics")
-
     // Material (XML views)
     implementation("com.google.android.material:material:1.12.0")
-
-    // Markdown Renderer
-    implementation("io.noties.markwon:core:4.6.2")
 }
 

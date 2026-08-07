@@ -9,13 +9,10 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Looper
 import androidx.core.content.ContextCompat
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationResult
-import com.google.android.gms.location.Priority
 
 internal fun hasLocationPermission(context: Context): Boolean {
     val fine = ContextCompat.checkSelfPermission(
@@ -82,29 +79,58 @@ internal fun startHeadingUpdates(
 }
 
 @SuppressLint("MissingPermission")
-internal fun FusedLocationProviderClient.startRealtimeLocationUpdates(
+internal fun startLocationUpdates(
+    context: Context,
+    minIntervalMs: Long = 5000L,
     onLocation: (Location) -> Unit,
     onFailure: (String) -> Unit
 ): () -> Unit {
-    val request = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 5000L)
-        .setMinUpdateIntervalMillis(3000L)
-        .build()
-
-    val callback = object : LocationCallback() {
-        override fun onLocationResult(result: LocationResult) {
-            val latest = result.lastLocation ?: return
-            onLocation(latest)
-        }
+    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+    if (locationManager == null) {
+        onFailure("位置情報サービスが利用できません。")
+        return {}
     }
+
+    val hasProvider = listOf(
+        LocationManager.GPS_PROVIDER,
+        LocationManager.NETWORK_PROVIDER
+    ).any { locationManager.isProviderEnabled(it) }
+
+    if (!hasProvider) {
+        onFailure("位置情報が無効になっています。")
+        return {}
+    }
+
+    val listener = object : LocationListener {
+        override fun onLocationChanged(location: Location) {
+            onLocation(location)
+        }
+
+        override fun onProviderEnabled(provider: String) {}
+        override fun onProviderDisabled(provider: String) {}
+    }
+
+    val minTime = minIntervalMs.coerceAtLeast(1000L)
 
     try {
-        requestLocationUpdates(request, callback, Looper.getMainLooper())
-            .addOnFailureListener {
-                onFailure("現在地の更新を開始できませんでした。")
+        listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER).forEach { provider ->
+            if (locationManager.allProviders.contains(provider)) {
+                locationManager.requestLocationUpdates(
+                    provider,
+                    minTime,
+                    0f,
+                    listener,
+                    Looper.getMainLooper()
+                )
             }
+        }
     } catch (_: SecurityException) {
         onFailure("位置情報の許可が必要です。")
+        return {}
+    } catch (_: Exception) {
+        onFailure("現在地の更新を開始できませんでした。")
+        return {}
     }
 
-    return { removeLocationUpdates(callback) }
+    return { locationManager.removeUpdates(listener) }
 }

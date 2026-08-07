@@ -2,8 +2,6 @@ package win.haya.yamaokaya
 
 import android.content.Intent
 import android.net.Uri
-import android.widget.TextView
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,7 +21,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -32,9 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,8 +40,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import io.noties.markwon.Markwon
 
 @Composable
 internal fun SettingsPage(
@@ -215,97 +208,6 @@ internal fun SettingsPage(
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(8.dp))
-
-        // リリースノート
-        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .animateContentSize()
-            ) {
-                var releaseNotes by remember { mutableStateOf<String?>(null) }
-                var releaseVersion by remember { mutableStateOf<String?>(null) }
-                var isLoadingNotes by remember { mutableStateOf(true) }
-                var showFullNotes by remember { mutableStateOf(false) }
-
-                LaunchedEffect(Unit) {
-                    val info = UpdateChecker.fetchLatestRelease(context)
-                    releaseVersion = info?.latestVersion
-                    releaseNotes = info?.releaseNotes
-                    isLoadingNotes = false
-                }
-
-                Text(
-                    text = "最新のリリースノート",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (isLoadingNotes) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.padding(4.dp),
-                            strokeWidth = 2.dp
-                        )
-                        Text("読み込み中…", style = MaterialTheme.typography.bodySmall)
-                    }
-                } else if (releaseNotes.isNullOrBlank()) {
-                    Text(
-                        "リリースノートを取得できませんでした",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    if (releaseVersion != null) {
-                        Text(
-                            text = releaseVersion!!,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                    }
-
-                    val displayNotes = if (showFullNotes) {
-                        releaseNotes!!
-                    } else {
-                        releaseNotes!!.take(200) +
-                            if (releaseNotes!!.length > 200) "…" else ""
-                    }
-
-                    AndroidView(
-                        factory = { ctx -> TextView(ctx) },
-                        update = { textView ->
-                            val markwon = Markwon.create(textView.context)
-                            markwon.setMarkdown(textView, displayNotes)
-                        }
-                    )
-
-                    if (releaseNotes!!.length > 200) {
-                        TextButton(onClick = { showFullNotes = !showFullNotes }) {
-                            Text(if (showFullNotes) "閉じる" else "すべて表示")
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "すべてのリリースを見る",
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.clickable {
-                        uriHandler.openUri("https://github.com/koba9813/yamaokaya/releases")
-                    }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
 
         // アプリ情報
         ElevatedCard(modifier = Modifier.fillMaxWidth()) {

@@ -1,6 +1,8 @@
 package win.haya.yamaokaya
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.location.LocationManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -41,7 +43,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.google.android.gms.location.LocationServices
 
 @SuppressLint("MissingPermission")
 @Composable
@@ -56,13 +57,12 @@ internal fun StampRallyScreen(
     LaunchedEffect(Unit) {
         if (hasLocationPermission(context)) {
             try {
-                LocationServices.getFusedLocationProviderClient(context)
-                    .lastLocation
-                    .addOnSuccessListener { location ->
-                        if (location != null) {
-                            currentLocation = Coordinates(location.latitude, location.longitude)
-                        }
-                    }
+                val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+                val lastLocation = locationManager?.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    ?: locationManager?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                lastLocation?.let {
+                    currentLocation = Coordinates(it.latitude, it.longitude)
+                }
             } catch (_: SecurityException) { }
         }
     }

@@ -6,28 +6,27 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Build
 import android.os.IBinder
+import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationResult
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
 
 class DistanceTrackerService : Service() {
 
-    private lateinit var fusedClient: FusedLocationProviderClient
-    private var locationCallback: LocationCallback? = null
+    private lateinit var locationManager: LocationManager
+    private var locationListener: LocationListener? = null
 
     override fun onCreate() {
         super.onCreate()
-        fusedClient = LocationServices.getFusedLocationProviderClient(this)
+        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         ensureNotificationChannel()
     }
 
@@ -47,10 +46,8 @@ class DistanceTrackerService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        locationCallback?.let { callback ->
-            fusedClient.removeLocationUpdates(callback)
-        }
-        locationCallback = null
+        locationListener?.let { locationManager.removeUpdates(it) }
+        locationListener = null
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -67,18 +64,10 @@ class DistanceTrackerService : Service() {
 
     @SuppressLint("MissingPermission")
     private fun startLocationTracking() {
-        if (locationCallback != null) return
+        if (locationListener != null) return
 
-        val request = LocationRequest.Builder(
-            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-            10_000L // 10秒ごと
-        )
-            .setMinUpdateIntervalMillis(5_000L) // 最短5秒
-            .build()
-
-        val callback = object : LocationCallback() {
-            override fun onLocationResult(result: LocationResult) {
-                val location = result.lastLocation ?: return
+        val listener = object : LocationListener {
+            override fun onLocationChanged(location: Location) {
                 val nearest = YamaokayaFinder.findNearest(
                     Coordinates(location.latitude, location.longitude)
                 )
@@ -87,10 +76,24 @@ class DistanceTrackerService : Service() {
                     buildTrackerNotification(formatDistanceText(nearest))
                 )
             }
+
+            override fun onProviderEnabled(provider: String) {}
+            override fun onProviderDisabled(provider: String) {}
         }
 
-        locationCallback = callback
-        fusedClient.requestLocationUpdates(request, callback, mainLooper)
+        locationListener = listener
+
+        listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER).forEach { provider ->
+            if (locationManager.allProviders.contains(provider)) {
+                locationManager.requestLocationUpdates(
+                    provider,
+                    10_000L,
+                    0f,
+                    listener,
+                    Looper.getMainLooper()
+                )
+            }
+        }
     }
 
     private fun formatDistanceText(nearest: ShopInfo?): String {
