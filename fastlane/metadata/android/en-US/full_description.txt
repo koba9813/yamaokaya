@@ -1,0 +1,16 @@
+Yamaokaya is Doko? is a free and open-source Android app that shows the distance and direction from your current location to the nearest Yamaokaya ramen shop.
+
+Features:
+- Real-time distance and bearing to the nearest store
+- A ramen image in the center points toward the store
+- Persistent notification with the nearest store distance (background location)
+- Special effects and notification when you get within 50 m
+- Stamp rally / check-in history
+- Share your distance to the store
+
+Notes:
+- Only stores registered inside the app are searchable
+- Search radius is 100 km
+- "Allow all the time" location permission is required for background notifications
+- A notification is shown continuously while the distance tracker is running
+- This is an unofficial fan app and is not affiliated with Yamaokaya

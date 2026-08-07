@@ -1,0 +1,1 @@
+Shows distance and direction to the nearest Yamaokaya ramen shop.

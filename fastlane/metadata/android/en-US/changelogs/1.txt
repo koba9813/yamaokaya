@@ -1,0 +1,4 @@
+V.beta1.2
+- Removed proprietary dependencies (Google Play Services, Firebase Analytics)
+- Replaced location provider with Android LocationManager
+- Removed built-in update checker
