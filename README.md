@@ -1,52 +1,55 @@
+# Yamaokaya is Doko? （V.beta1.2）
 
-
-# Yamaokaya is Doko? （V.beta1.1）
-
-現在地から最寄りの「山岡家」までの距離と方角を表示するAndroidアプリ（V.beta1.1）です。
+現在地から最寄りの「山岡家」までの距離と方角を表示する、フリー・オープンソースの Android アプリです。
 
 ---
 
-## 最新APKダウンロード
+## インストール
 
-下記より最新版APKを直接ダウンロードできます。
-
-👉 [Yamaokaya_V.beta1.1.apk](app/release/Yamaokaya_V.beta1.1.apk)
-
----
-
-## インストール方法
-1. 上記リンクからAPKファイルをダウンロード
-2. Android端末に転送し、ファイルを開く
-3. 「提供元不明のアプリのインストール」を許可
-4. インストール後、アプリを起動
-5. 位置情報の利用を許可
+- **F-Droid**（掲載申請中）
+  <!-- F-Droid 掲載後はバッジやリンクを追記してください -->
+- または [GitHub Releases](https://github.com/koba9813/yamaokaya/releases) から最新 APK をダウンロードできます。
 
 ---
 
 ## 主な機能
+
 - 現在地から最寄りの山岡家店舗までの距離・方角をリアルタイム表示
-- 画面中央の矢印が店舗方向を指し示す
+- 画面中央のラーメン画像が店舗方向を指し示す
 - 最寄り店舗までの距離を常時通知（バックグラウンド対応）
-- 10m/50m以内で特別な演出
+- 店舗 50m 圏内に入ると特別な演出と通知
 - 訪問履歴を残せる「スタンプラリー（チェックイン）」機能
-- 店舗までの距離を簡単に共有できる「SNSシェア（LINE, X, Instagram）」機能
-- アプリ内からのメニュー確認機能
+- 店舗までの距離を簡単に共有できるシェア機能
+
+---
+
+## 必要な権限
+
+- **位置情報（ precise / approximate ）**: 現在地を取得して最寄り店舗を計算するため
+- **バックグラウンド位置情報**: 常時通知で距離を更新し続けるために使用
+- **通知**: 接近通知・距離トラッカー通知の表示に使用
 
 ---
 
 ## 注意事項
+
 - 検索対象はアプリ内に登録された店舗座標のみです
-- 検索半径は100kmです
+- 検索半径は 100km です
 - バックグラウンド通知には「常に許可」の位置情報権限が必要です
-- Foreground Service利用のため通知が常時表示されます
-- Google Play非公開アプリのため、インストール時に警告が表示される場合があります
+- Foreground Service を利用するため、距離トラッカー有効時は通知が常時表示されます
+- 本アプリは山岡家の公式アプリではありません
 
 ---
 
 ## 開発・構成技術
+
 - Kotlin / Jetpack Compose
-- Google Play Services Location
+- Android 標準 LocationManager（Google Play Services 非依存）
 
 ---
 
-ご質問・不具合報告は[GitHub Issues](https://github.com/koba9813/yamaokaya/issues)までお願いします。
+## ライセンス
+
+[MIT License](LICENSE)
+
+ご質問・不具合報告は [GitHub Issues](https://github.com/koba9813/yamaokaya/issues) までお願いします。

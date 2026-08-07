@@ -1,31 +1,49 @@
-# Yamaokaya is Doko? V.beta1.1 Release Notes
+# Yamaokaya is Doko? V.beta1.2 Release Notes
 
 ## Overview
-This is the V.beta1.1 release of "Yamaokaya is Doko?", an Android app that displays the distance and direction from your current location to the nearest "Yamaokaya" restaurant.
+
+「Yamaokaya is Doko?」の V.beta1.2 リリースです。
+このバージョンでは、F-Droid への公開に向けてプロプライエタリな依存関係を削除し、Android 標準 API のみで動作するように整理しました。
 
 ## Main Features
-- Real-time display of the distance and direction to the nearest Yamaokaya store from your current location.
-- An arrow in the center of the screen points toward the store.
-- Constant notification of the distance to the nearest store (supports background operation).
-- Special visual effects when near a store.
+
+- 現在地から最寄りの山岡家店舗までの距離・方角をリアルタイム表示
+- 画面中央のラーメン画像が店舗方向を指し示す
+- 最寄り店舗までの距離を常時通知（バックグラウンド対応）
+- 店舗 50m 圏内に入ると特別な演出と通知
+- 訪問履歴を残せる「スタンプラリー（チェックイン）」機能
+- 店舗までの距離を共有できるシェア機能
 
 ## Installation Instructions
-1. Download [Yamaokaya_V.beta1.1.apk](app/release/Yamaokaya_beta3.1.apk).
-2. Transfer it to your Android device and open the file.
-3. Grant permission for "Install unknown apps."
-4. After installation, launch the app.
-5. Grant permission for location access.
+
+1. F-Droid からインストール（掲載後）
+2. または [GitHub Releases](https://github.com/koba9813/yamaokaya/releases) から最新 APK をダウンロード
+3. Android 端末に転送し、ファイルを開く
+4. 「提供元不明のアプリのインストール」を許可
+5. インストール後、アプリを起動
+6. 位置情報の利用を許可
 
 ## Notes
-- The search is limited to store coordinates registered within the app.
-- The search radius is 100 km.
-- "Allow all the time" location permission is required for background notifications.
-- A notification will be displayed at all times due to the use of a Foreground Service.
-- As this is a private app not on Google Play, a warning may appear during installation.
+
+- 検索対象はアプリ内に登録された店舗座標のみです
+- 検索半径は 100km です
+- バックグラウンド通知には「常に許可」の位置情報権限が必要です
+- Foreground Service 利用のため、距離トラッカー有効時は通知が常時表示されます
+- Google Play Services / Firebase などのプロプライエタリなライブラリは使用していません
+- 本アプリは山岡家の公式アプリではありません
+
+## Changes in V.beta1.2
+
+- Google Play Services Location の依存を削除し、Android 標準 LocationManager に置き換え
+- Firebase Analytics と Google Services プラグインを削除
+- 組み込みの更新確認機能を削除
+- 設定画面から最新リリースノートの自動取得を削除
 
 ## Future Plans
-- Update store data.
-- UI improvements.
-- Bug fixes.
+
+- F-Droid への掲載
+- 店舗データの更新
+- UI の改善
+- バグ修正
 
 For questions or bug reports, please visit [GitHub Issues](https://github.com/koba9813/yamaokaya/issues).
