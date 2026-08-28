@@ -1,25 +1,29 @@
-# Yamaokaya is Doko? V.beta1.2 Release Notes
+# Yamaokaya is Doko? V.beta2.0 Release Notes
 
 ## Overview
 
-「Yamaokaya is Doko?」の V.beta1.2 リリースです。
-このバージョンでは、F-Droid への公開に向けてプロプライエタリな依存関係を削除し、Android 標準 API のみで動作するように整理しました。
+「Yamaokaya is Doko?」の V.beta2.0 リリースです。
+このバージョンでは、UI/UX を Material Design 3 に刷新し、ホーム画面ウィジェットを追加しました。
+配布は Android の限定配信アカウントを通じて行います。
 
 ## Main Features
 
 - 現在地から最寄りの山岡家店舗までの距離・方角をリアルタイム表示
-- 画面中央のラーメン画像が店舗方向を指し示す
+- 画面中央の方向指示画像が店舗方向を指し示す
 - 最寄り店舗までの距離を常時通知（バックグラウンド対応）
 - 店舗 50m 圏内に入ると特別な演出と通知
 - 訪問履歴を残せる「スタンプラリー（チェックイン）」機能
 - 店舗までの距離を共有できるシェア機能
+- ホーム画面ウィジェットで最寄り店舗の距離を確認
+  - 横長ウィジェット：Google マップのルートボタン表示
+  - 縦長ウィジェット：近い順に複数店舗を表示
 
 ## Installation Instructions
 
-1. F-Droid からインストール（掲載後）
+1. Android の限定配信アカウントからインストール
 2. または [GitHub Releases](https://github.com/koba9813/yamaokaya/releases) から最新 APK をダウンロード
 3. Android 端末に転送し、ファイルを開く
-4. 「提供元不明のアプリのインストール」を許可
+4. 「提供元不明のアプリのインストール」を許可（GitHub Releases からの場合）
 5. インストール後、アプリを起動
 6. 位置情報の利用を許可
 
@@ -32,16 +36,20 @@
 - Google Play Services / Firebase などのプロプライエタリなライブラリは使用していません
 - 本アプリは山岡家の公式アプリではありません
 
-## Changes in V.beta1.2
+## Changes in V.beta2.0
 
-- Google Play Services Location の依存を削除し、Android 標準 LocationManager に置き換え
-- Firebase Analytics と Google Services プラグインを削除
-- 組み込みの更新確認機能を削除
-- 設定画面から最新リリースノートの自動取得を削除
+- UI/UX を Material Design 3 に刷新（白基調のライトテーマ固定）
+- ホーム画面ウィジェットを追加
+- ウィジェットのサイズに応じてルートボタン / 複数店舗表示を切り替え
+- 方向指示画像を `susuru_v2.png` に更新
+- 設定画面に「Special Thanks: Photo by Sagara」を追加
+- バックグラウンドサービスと接近通知の制御を改善
+- 位置情報更新間隔の設定を正しく反映
+- ユニットテストを追加
+- 配布方法を Android 限定配信アカウントに変更
 
 ## Future Plans
 
-- F-Droid への掲載
 - 店舗データの更新
 - UI の改善
 - バグ修正

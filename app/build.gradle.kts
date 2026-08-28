@@ -12,8 +12,8 @@ android {
         applicationId = "win.haya.yamaokaya"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "V.beta1.2"
+        versionCode = 2
+        versionName = "V.beta2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
