@@ -1,0 +1,4 @@
+V.beta1.2
+- Google Play Services / Firebase Analytics などのプロプライエタリな依存を削除
+- 位置情報取得を Android 標準 LocationManager に置き換え
+- 組み込みの更新確認機能を削除

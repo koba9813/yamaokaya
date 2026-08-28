@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^export JAVA_HOME=/opt/android-studio/jbr && cd /home/koba_9813/AndroidStudioProjects/YamaokayaisDoko && \\./gradlew :app:compileDebugKotlin 2>&1 \\| tail -30$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
