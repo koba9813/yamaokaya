@@ -5,4 +5,6 @@
     <string name="widget_no_shop">近くに山岡家がありません</string>
     <string name="widget_locating">現在地を特定中</string>
     <string name="widget_permission_needed">位置情報の許可が必要です</string>
+    <string name="widget_route">ルート</string>
+    <string name="widget_open_map">Googleマップでルートを表示</string>
 </resources>

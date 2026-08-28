@@ -14,7 +14,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val viewModel: YamaokayaViewModel = viewModel()
 
-            YamaokayaTheme {
+            YamaokayaTheme(darkTheme = false) {
                 YamaokayaScreen(
                     viewModel = viewModel
                 )
