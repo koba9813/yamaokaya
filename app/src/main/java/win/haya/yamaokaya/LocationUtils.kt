@@ -29,6 +29,7 @@ internal fun hasLocationPermission(context: Context): Boolean {
 
 internal const val KOKO_RADIUS_METERS = 50f
 internal const val SPECIAL_EFFECT_RADIUS_METERS = 50f
+internal const val CHECK_IN_RADIUS_METERS = 20f
 
 internal fun normalizeDegrees(value: Float): Float {
     val normalized = value % 360f
