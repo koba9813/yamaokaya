@@ -282,6 +282,27 @@ internal fun SettingsPage(
 
         Spacer(modifier = Modifier.height(20.dp))
 
+        // スペシャルサンクス
+        Text(
+            text = "Special Thanks",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "Photo by Sagara",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
         // 意見・要望
         Text(
             text = "意見・要望",
