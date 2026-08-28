@@ -37,6 +37,7 @@ internal fun InformationPage(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .padding(20.dp)
             .verticalScroll(rememberScrollState())
     ) {

@@ -94,6 +94,7 @@ internal fun StampRallyScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .padding(20.dp)
             .verticalScroll(rememberScrollState())
     ) {

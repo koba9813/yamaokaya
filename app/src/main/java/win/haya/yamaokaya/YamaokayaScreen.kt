@@ -88,7 +88,6 @@ internal fun YamaokayaScreen(
 
     val isWithinRadius = nearestShop?.distanceMeters?.let { it <= KOKO_RADIUS_METERS } == true
     val isSpecialRange = nearestShop?.distanceMeters?.let { it <= SPECIAL_EFFECT_RADIUS_METERS } == true
-    val isCheckInRange = nearestShop?.distanceMeters?.let { it <= CHECK_IN_RADIUS_METERS } == true
 
     // Sub-page navigation
     when {
@@ -133,6 +132,7 @@ internal fun YamaokayaScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .padding(20.dp)
     ) {
         Text(
@@ -217,7 +217,7 @@ internal fun YamaokayaScreen(
                     currentDrawableId = currentDrawableId,
                     arrowRotation = arrowRotation,
                     isSpecialRange = isSpecialRange,
-                    isCheckInRange = isCheckInRange,
+                    isWithinRadius = isWithinRadius,
                     onImageClick = {
                         if (imageDrawableIds.size > 1) {
                             selectedImageIndex = (selectedImageIndex + 1) % imageDrawableIds.size
@@ -362,7 +362,7 @@ private fun MainContent(
     currentDrawableId: Int,
     arrowRotation: Float,
     isSpecialRange: Boolean,
-    isCheckInRange: Boolean,
+    isWithinRadius: Boolean,
     onImageClick: () -> Unit,
     onCheckIn: (String) -> Unit,
     checkInFeedbackMessage: String?,
@@ -388,35 +388,33 @@ private fun MainContent(
             }
         }
 
-        if (isCheckInRange) {
-            Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-            val isCheckedIn = stampRepository.getRemainingCooldownMillis(shop.name) > 0L
-            val buttonModifier = if (isSpecialRange) {
-                Modifier.fillMaxWidth().height(56.dp)
-            } else {
-                Modifier
+        val isCheckedIn = stampRepository.getRemainingCooldownMillis(shop.name) > 0L
+        val buttonModifier = if (isSpecialRange) {
+            Modifier.fillMaxWidth().height(56.dp)
+        } else {
+            Modifier
+        }
+
+        if (isCheckedIn) {
+            Button(onClick = onOpenMenu, modifier = buttonModifier) {
+                Text("メニューを見る")
             }
-
-            if (isCheckedIn) {
-                Button(onClick = onOpenMenu, modifier = buttonModifier) {
-                    Text("メニューを見る")
-                }
-            } else {
-                Button(
-                    onClick = { onCheckIn(shop.name) },
-                    modifier = buttonModifier
-                ) {
-                    Text("チェックイン")
-                }
-                if (checkInFeedbackMessage != null) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = checkInFeedbackMessage,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
+        } else {
+            Button(
+                onClick = { onCheckIn(shop.name) },
+                modifier = buttonModifier
+            ) {
+                Text("チェックイン")
+            }
+            if (checkInFeedbackMessage != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = checkInFeedbackMessage,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
         }
     }

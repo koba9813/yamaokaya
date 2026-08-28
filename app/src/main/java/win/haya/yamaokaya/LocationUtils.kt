@@ -29,7 +29,6 @@ internal fun hasLocationPermission(context: Context): Boolean {
 
 internal const val KOKO_RADIUS_METERS = 50f
 internal const val SPECIAL_EFFECT_RADIUS_METERS = 50f
-internal const val CHECK_IN_RADIUS_METERS = 20f
 
 internal fun normalizeDegrees(value: Float): Float {
     val normalized = value % 360f
@@ -62,6 +61,22 @@ internal fun calculateBearing(from: Coordinates, to: Coordinates): Double {
 
     val bearing = Math.toDegrees(kotlin.math.atan2(y, x))
     return (bearing + 360.0) % 360.0
+}
+
+@SuppressLint("MissingPermission")
+internal fun getLastKnownLocation(context: Context): Location? {
+    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+        ?: return null
+
+    return listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+        .mapNotNull { provider ->
+            try {
+                locationManager.getLastKnownLocation(provider)
+            } catch (_: SecurityException) {
+                null
+            }
+        }
+        .maxByOrNull { it.time }
 }
 
 internal fun startHeadingUpdates(

@@ -119,6 +119,8 @@ class YamaokayaViewModel(application: Application) : AndroidViewModel(applicatio
         if (_appSettings.value.trackerNotificationEnabled) {
             ensureDistanceTrackerRunning(getApplication())
         }
+
+        YamaokayaWidgetProvider.updateAllWidgets(getApplication())
     }
 
     private fun maybeSendKokoNotification(shopName: String) {
