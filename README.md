@@ -6,8 +6,7 @@
 
 ## インストール
 
-- **Android 限定配信アカウント** からインストール
-- または [GitHub Releases](https://github.com/koba9813/yamaokaya/releases) から最新 APK をダウンロードできます。
+- [GitHub Releases](https://github.com/koba9813/yamaokaya/releases) から最新 APK をダウンロードできます。
 
 ---
 
