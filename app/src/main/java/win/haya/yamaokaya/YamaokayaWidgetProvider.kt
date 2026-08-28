@@ -68,12 +68,33 @@ class YamaokayaWidgetProvider : AppWidgetProvider() {
 
         private fun selectLayout(context: Context, options: Bundle?): Int {
             val density = context.resources.displayMetrics.density
-            val minWidth = ((options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) ?: 0) / density).toInt()
-            val maxHeight = ((options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT) ?: 0) / density).toInt()
+            val minWidthRaw = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) ?: 0
+            val maxWidthRaw = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH) ?: 0
+            val minHeightRaw = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) ?: 0
+            val maxHeightRaw = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT) ?: 0
+
+            val minWidthDp = (minWidthRaw / density).toInt()
+            val maxWidthDp = (maxWidthRaw / density).toInt()
+            val minHeightDp = (minHeightRaw / density).toInt()
+            val maxHeightDp = (maxHeightRaw / density).toInt()
+
+            android.util.Log.d(
+                "YamaokayaWidget",
+                "sizes raw/minW=$minWidthRaw maxW=$maxWidthRaw minH=$minHeightRaw maxH=$maxHeightRaw " +
+                    "dp/minW=$minWidthDp maxW=$maxWidthDp minH=$minHeightDp maxH=$maxHeightDp"
+            )
+
+            val isTall = (minHeightRaw >= 180 || maxHeightRaw >= 220 ||
+                minHeightDp >= 120 || maxHeightDp >= 140) &&
+                (minWidthRaw >= 150 || maxWidthRaw >= 170 ||
+                    minWidthDp >= 100 || maxWidthDp >= 110)
+
+            val isWide = minWidthRaw >= 250 || maxWidthRaw >= 300 ||
+                minWidthDp >= 170 || maxWidthDp >= 200
 
             return when {
-                maxHeight >= 180 && minWidth >= 180 -> R.layout.widget_yamaokaya_tall
-                minWidth >= 300 -> R.layout.widget_yamaokaya_wide
+                isTall -> R.layout.widget_yamaokaya_tall
+                isWide -> R.layout.widget_yamaokaya_wide
                 else -> R.layout.widget_yamaokaya
             }
         }
