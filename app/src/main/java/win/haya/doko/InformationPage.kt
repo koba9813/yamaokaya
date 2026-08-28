@@ -1,4 +1,4 @@
-package win.haya.yamaokaya
+package win.haya.doko
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement

@@ -1,4 +1,4 @@
-package win.haya.yamaokaya
+package win.haya.doko
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

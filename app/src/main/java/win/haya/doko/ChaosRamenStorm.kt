@@ -1,4 +1,4 @@
-package win.haya.yamaokaya
+package win.haya.doko
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode

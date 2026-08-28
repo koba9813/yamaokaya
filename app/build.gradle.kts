@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "win.haya.yamaokaya"
+    namespace = "win.haya.doko"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "win.haya.yamaokaya"
+        applicationId = "win.haya.doko"
         minSdk = 24
         targetSdk = 35
         versionCode = 2
@@ -18,8 +18,18 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("release-key.jks")
+            storePassword = "yamaokaya-release"
+            keyAlias = "yamaokaya"
+            keyPassword = "yamaokaya-release"
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

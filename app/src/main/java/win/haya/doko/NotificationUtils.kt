@@ -1,4 +1,4 @@
-package win.haya.yamaokaya
+package win.haya.doko
 
 import android.annotation.SuppressLint
 import android.app.NotificationChannel

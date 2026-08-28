@@ -1,4 +1,4 @@
-package win.haya.yamaokaya
+package win.haya.doko
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
