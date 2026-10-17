@@ -137,6 +137,29 @@ internal object UpdateChecker {
     }
 
     private fun isNewerVersion(current: String, latest: String): Boolean {
-        return current.trim() != latest.trim()
+        val currentParts = parseVersion(current)
+        val latestParts = parseVersion(latest)
+        val maxLength = maxOf(currentParts.size, latestParts.size)
+        for (i in 0 until maxLength) {
+            val currentPart = currentParts.getOrElse(i) { 0 }
+            val latestPart = latestParts.getOrElse(i) { 0 }
+            when {
+                latestPart > currentPart -> return true
+                latestPart < currentPart -> return false
+            }
+        }
+        return false
+    }
+
+    private fun parseVersion(version: String): List<Int> {
+        val normalized = version.trim()
+            .removePrefix("V")
+            .removePrefix("v")
+            .removePrefix(".")
+            .replace(Regex("[a-zA-Z]"), ".")
+            .replace(Regex("""\.+"""), ".")
+            .trim('.')
+        if (normalized.isBlank()) return emptyList()
+        return normalized.split(".").mapNotNull { it.toIntOrNull() }
     }
 }

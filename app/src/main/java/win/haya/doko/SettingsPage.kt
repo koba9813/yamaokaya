@@ -2,8 +2,6 @@ package win.haya.doko
 
 import android.content.Intent
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -25,11 +23,8 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -68,19 +63,7 @@ internal fun SettingsPage(
     val uriHandler = LocalUriHandler.current
     val coroutineScope = rememberCoroutineScope()
     var settings by remember { mutableStateOf(appSettings) }
-    var updateState by remember { mutableStateOf<UpdateState>(UpdateState.Idle) }
-    var pendingRelease by remember { mutableStateOf<ReleaseInfo?>(null) }
-
-    val installPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) {
-        pendingRelease?.let { release ->
-            if (UpdateChecker.canInstallPackages(context)) {
-                coroutineScope.launch { downloadAndInstall(context, release) { updateState = it } }
-            }
-            pendingRelease = null
-        }
-    }
+    var updateState by remember { mutableStateOf<UpdateFlowState>(UpdateFlowState.Hidden) }
 
     Scaffold(
         topBar = {
@@ -250,37 +233,19 @@ internal fun SettingsPage(
             UpdateSection(
                 state = updateState,
                 onCheckUpdate = {
-                    updateState = UpdateState.Checking
+                    updateState = UpdateFlowState.Checking
                     coroutineScope.launch {
-                        updateState = try {
-                            val release = UpdateChecker.checkForUpdate(context)
-                            if (release != null) {
-                                UpdateState.Available(release)
-                            } else {
-                                UpdateState.UpToDate
-                            }
-                        } catch (e: Exception) {
-                            UpdateState.Error(e.message ?: "不明なエラー")
-                        }
+                        updateState = checkForUpdate(context)
                     }
-                },
-                onConfirmInstall = { release ->
-                if (!UpdateChecker.canInstallPackages(context)) {
-                    pendingRelease = release
-                    installPermissionLauncher.launch(
-                        Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                            data = Uri.parse("package:${context.packageName}")
-                        }
-                    )
-                } else {
-                        coroutineScope.launch {
-                            downloadAndInstall(context, release) { updateState = it }
-                        }
-                    }
-                },
+                }
+            )
+
+            UpdateFlow(
+                state = updateState,
+                onStateChange = { updateState = it },
                 onDismiss = {
-                    if (updateState !is UpdateState.Downloading) {
-                        updateState = UpdateState.Idle
+                    if (updateState !is UpdateFlowState.Downloading) {
+                        updateState = UpdateFlowState.Hidden
                     }
                 }
             )
@@ -411,21 +376,10 @@ private fun LinkItem(
     )
 }
 
-private sealed class UpdateState {
-    data object Idle : UpdateState()
-    data object Checking : UpdateState()
-    data class Available(val release: ReleaseInfo) : UpdateState()
-    data object UpToDate : UpdateState()
-    data class Downloading(val progress: Float) : UpdateState()
-    data class Error(val message: String) : UpdateState()
-}
-
 @Composable
 private fun UpdateSection(
-    state: UpdateState,
-    onCheckUpdate: () -> Unit,
-    onConfirmInstall: (ReleaseInfo) -> Unit,
-    onDismiss: () -> Unit
+    state: UpdateFlowState,
+    onCheckUpdate: () -> Unit
 ) {
     SectionTitle(title = "アップデート")
     ElevatedCard(
@@ -452,7 +406,7 @@ private fun UpdateSection(
                 )
             }
             when (state) {
-                is UpdateState.Checking -> {
+                is UpdateFlowState.Checking -> {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 }
                 else -> {
@@ -468,98 +422,5 @@ private fun UpdateSection(
                 }
             }
         }
-    }
-
-    when (state) {
-        is UpdateState.Available -> {
-            AlertDialog(
-                onDismissRequest = onDismiss,
-                title = { Text("新しいバージョンがあります") },
-                text = {
-                    Column {
-                        Text(
-                            text = "最新: ${state.release.versionName}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = state.release.body.ifBlank { "リリースノートはありません" },
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(onClick = { onConfirmInstall(state.release) }) {
-                        Text("ダウンロードしてインストール")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = onDismiss) {
-                        Text("キャンセル")
-                    }
-                }
-            )
-        }
-        is UpdateState.Downloading -> {
-            AlertDialog(
-                onDismissRequest = { },
-                title = { Text("ダウンロード中") },
-                text = {
-                    Column {
-                        LinearProgressIndicator(
-                            progress = { state.progress.coerceIn(0f, 1f) },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("${(state.progress * 100).toInt()}%")
-                    }
-                },
-                confirmButton = { }
-            )
-        }
-        is UpdateState.UpToDate -> {
-            AlertDialog(
-                onDismissRequest = onDismiss,
-                title = { Text("最新版です") },
-                text = { Text("現在のバージョンが最新です。") },
-                confirmButton = {
-                    TextButton(onClick = onDismiss) {
-                        Text("OK")
-                    }
-                }
-            )
-        }
-        is UpdateState.Error -> {
-            AlertDialog(
-                onDismissRequest = onDismiss,
-                title = { Text("エラー") },
-                text = { Text(state.message) },
-                confirmButton = {
-                    TextButton(onClick = onDismiss) {
-                        Text("OK")
-                    }
-                }
-            )
-        }
-        else -> { }
-    }
-}
-
-private suspend fun downloadAndInstall(
-    context: android.content.Context,
-    release: ReleaseInfo,
-    onState: (UpdateState) -> Unit
-) {
-    onState(UpdateState.Downloading(0f))
-    try {
-        val apkFile = UpdateChecker.downloadApk(context, release.downloadUrl) { progress ->
-            onState(UpdateState.Downloading(progress))
-        }
-        onState(UpdateState.Downloading(1f))
-        UpdateChecker.installApk(context, apkFile)
-        onState(UpdateState.Idle)
-    } catch (e: Exception) {
-        onState(UpdateState.Error(e.message ?: "ダウンロードに失敗しました"))
     }
 }

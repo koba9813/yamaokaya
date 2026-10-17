@@ -133,6 +133,7 @@ internal fun YamaokayaScreen(
     var checkInFeedbackMessage by remember { mutableStateOf<String?>(null) }
     var splashFinished by rememberSaveable { mutableStateOf(false) }
     var titleMoved by rememberSaveable { mutableStateOf(false) }
+    var updateState by remember { mutableStateOf<UpdateFlowState>(UpdateFlowState.Hidden) }
 
     val imageNames = remember {
         listOf("yamaokaya", "gyoza", "miso", "shio", "tokusei_miso", "kara_miso")
@@ -206,6 +207,16 @@ internal fun YamaokayaScreen(
         if (!isInitialLoading && !splashFinished) {
             delay(900)
             splashFinished = true
+        }
+    }
+
+    LaunchedEffect(splashFinished) {
+        if (splashFinished && updateState == UpdateFlowState.Hidden) {
+            delay(1200)
+            val result = checkForUpdate(context)
+            if (result is UpdateFlowState.Available) {
+                updateState = result
+            }
         }
     }
 
@@ -420,6 +431,16 @@ internal fun YamaokayaScreen(
                 )
             }
         }
+
+        UpdateFlow(
+            state = updateState,
+            onStateChange = { updateState = it },
+            onDismiss = {
+                if (updateState !is UpdateFlowState.Downloading) {
+                    updateState = UpdateFlowState.Hidden
+                }
+            }
+        )
     }
 }
 
