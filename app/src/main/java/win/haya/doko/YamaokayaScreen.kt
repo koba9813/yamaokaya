@@ -130,6 +130,7 @@ internal fun YamaokayaScreen(
     var showStampRally by remember { mutableStateOf(false) }
     var showGallery by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
+    var cameraShop by remember { mutableStateOf<String?>(null) }
     var checkInFeedbackMessage by remember { mutableStateOf<String?>(null) }
     var splashFinished by rememberSaveable { mutableStateOf(false) }
     var titleMoved by rememberSaveable { mutableStateOf(false) }
@@ -171,6 +172,20 @@ internal fun YamaokayaScreen(
             GalleryScreen(
                 photoRepository = remember { PhotoRepository(context) },
                 onClose = { showGallery = false }
+            )
+            return
+        }
+        cameraShop != null -> {
+            CameraCaptureScreen(
+                shopName = cameraShop!!,
+                onCaptured = { file ->
+                    PhotoRepository.decodeSampledBitmapFromUri(context, android.net.Uri.fromFile(file), 1024)?.let { bitmap ->
+                        photoRepository.savePhoto(cameraShop!!, bitmap)
+                    }
+                    file.delete()
+                    cameraShop = null
+                },
+                onClose = { cameraShop = null }
             )
             return
         }
@@ -346,7 +361,8 @@ internal fun YamaokayaScreen(
                         photoRepository = photoRepository,
                         checkInFeedbackMessage = checkInFeedbackMessage,
                         onCheckInFeedbackMessage = { checkInFeedbackMessage = it },
-                        onOpenMap = { openGoogleMaps(context, shop.coordinates) }
+                        onOpenMap = { openGoogleMaps(context, shop.coordinates) },
+                        onOpenCamera = { name -> cameraShop = name }
                     )
                 }
 
@@ -689,29 +705,25 @@ private fun AtShopContent(
     photoRepository: PhotoRepository,
     checkInFeedbackMessage: String?,
     onCheckInFeedbackMessage: (String?) -> Unit,
-    onOpenMap: () -> Unit
+    onOpenMap: () -> Unit,
+    onOpenCamera: (String) -> Unit
 ) {
     val context = LocalContext.current
     val isCheckedIn = stampRepository.getRemainingCooldownMillis(shop.name) > 0L
-    var captureUri by remember { mutableStateOf<Uri?>(null) }
-
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
-    ) { success ->
-        val uri = captureUri
-        if (success && uri != null) {
-            PhotoRepository.decodeSampledBitmapFromUri(context, uri, 1024)?.let { bitmap ->
-                photoRepository.savePhoto(shop.name, bitmap)
-            }
-        }
-        captureUri = null
-    }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) {
-            startCapture(context, shop.name, { captureUri = it }, cameraLauncher)
+        if (granted) onOpenCamera(shop.name)
+    }
+
+    val galleryPickerLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            PhotoRepository.decodeSampledBitmapFromUri(context, uri, 1024)?.let { bitmap ->
+                photoRepository.savePhoto(shop.name, bitmap)
+            }
         }
     }
 
@@ -779,14 +791,14 @@ private fun AtShopContent(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             OutlinedButton(
                 onClick = {
                     if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
                         == PackageManager.PERMISSION_GRANTED
                     ) {
-                        startCapture(context, shop.name, { captureUri = it }, cameraLauncher)
+                        onOpenCamera(shop.name)
                     } else {
                         cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                     }
@@ -798,8 +810,25 @@ private fun AtShopContent(
                     contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("写真を撮る")
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("撮影", style = MaterialTheme.typography.labelLarge)
+            }
+
+            OutlinedButton(
+                onClick = { galleryPickerLauncher.launch(
+                    androidx.activity.result.PickVisualMediaRequest(
+                        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                    )
+                ) },
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.PhotoLibrary,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("ギャラリー", style = MaterialTheme.typography.labelLarge)
             }
 
             OutlinedButton(
@@ -811,8 +840,8 @@ private fun AtShopContent(
                     contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("地図")
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("地図", style = MaterialTheme.typography.labelLarge)
             }
         }
 
@@ -1044,21 +1073,4 @@ private fun openGoogleMaps(context: android.content.Context, coordinates: Coordi
     }
 }
 
-private fun startCapture(
-    context: android.content.Context,
-    shopName: String,
-    onUriReady: (Uri) -> Unit,
-    launcher: androidx.activity.result.ActivityResultLauncher<Uri>
-) {
-    val tempFile = File(context.cacheDir, "capture_${shopName}.jpg").apply {
-        delete()
-        createNewFile()
-    }
-    val uri = FileProvider.getUriForFile(
-        context,
-        "${context.packageName}.fileprovider",
-        tempFile
-    )
-    onUriReady(uri)
-    launcher.launch(uri)
-}
+

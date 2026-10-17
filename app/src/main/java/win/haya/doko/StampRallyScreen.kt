@@ -104,29 +104,28 @@ internal fun StampRallyScreen(
 
     var pendingShopName by remember { mutableStateOf<String?>(null) }
     var photoRefresh by remember { mutableIntStateOf(0) }
-    var captureUri by remember { mutableStateOf<Uri?>(null) }
+    var cameraShopName by remember { mutableStateOf<String?>(null) }
+    var galleryTargetShop by remember { mutableStateOf<String?>(null) }
     var photoMessage by remember { mutableStateOf<String?>(null) }
 
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
-    ) { success ->
-        val shopName = pendingShopName
-        val uri = captureUri
-        if (success && shopName != null && uri != null) {
+    val galleryPickerLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        val shop = galleryTargetShop
+        if (uri != null && shop != null) {
             PhotoRepository.decodeSampledBitmapFromUri(context, uri, 1024)?.let { bitmap ->
-                photoRepository.savePhoto(shopName, bitmap)
+                photoRepository.savePhoto(shop, bitmap)
                 photoRefresh++
             }
         }
-        pendingShopName = null
-        captureUri = null
+        galleryTargetShop = null
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            pendingShopName?.let { startCapture(context, it, { captureUri = it }, cameraLauncher) }
+            pendingShopName?.let { cameraShopName = it }
         } else {
             pendingShopName = null
         }
@@ -174,6 +173,26 @@ internal fun StampRallyScreen(
 
     val visitedCount = ranking.count { it.second > 0 }
     val progress = if (filteredNames.isEmpty()) 0f else visitedCount.toFloat() / filteredNames.size
+
+    if (cameraShopName != null) {
+        CameraCaptureScreen(
+            shopName = cameraShopName!!,
+            onCaptured = { file ->
+                PhotoRepository.decodeSampledBitmapFromUri(context, android.net.Uri.fromFile(file), 1024)?.let { bitmap ->
+                    photoRepository.savePhoto(cameraShopName!!, bitmap)
+                    photoRefresh++
+                }
+                file.delete()
+                cameraShopName = null
+                pendingShopName = null
+            },
+            onClose = {
+                cameraShopName = null
+                pendingShopName = null
+            }
+        )
+        return
+    }
 
     Scaffold(
         topBar = {
@@ -235,10 +254,18 @@ internal fun StampRallyScreen(
                         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
                             == PackageManager.PERMISSION_GRANTED
                         ) {
-                            startCapture(context, name, { captureUri = it }, cameraLauncher)
+                            cameraShopName = name
                         } else {
                             permissionLauncher.launch(Manifest.permission.CAMERA)
                         }
+                    },
+                    onGalleryClick = { name ->
+                        galleryTargetShop = name
+                        galleryPickerLauncher.launch(
+                            androidx.activity.result.PickVisualMediaRequest(
+                                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                            )
+                        )
                     }
                 )
             }
@@ -305,10 +332,18 @@ internal fun StampRallyScreen(
                         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
                             == PackageManager.PERMISSION_GRANTED
                         ) {
-                            startCapture(context, name, { captureUri = it }, cameraLauncher)
+                            cameraShopName = name
                         } else {
                             permissionLauncher.launch(Manifest.permission.CAMERA)
                         }
+                    },
+                    onGalleryClick = {
+                        galleryTargetShop = name
+                        galleryPickerLauncher.launch(
+                            androidx.activity.result.PickVisualMediaRequest(
+                                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                            )
+                        )
                     }
                 )
             }
@@ -375,7 +410,8 @@ private fun NearestShopCard(
     isNearby: Boolean,
     photoRepository: PhotoRepository,
     photoRefresh: Int,
-    onCameraClick: (String) -> Unit
+    onCameraClick: (String) -> Unit,
+    onGalleryClick: (String) -> Unit
 ) {
     val latestPhoto = remember(photoRefresh, shop?.name) {
         shop?.name?.let { photoRepository.getLatestPhoto(it) }
@@ -441,19 +477,28 @@ private fun NearestShopCard(
                             )
                         }
                     }
-                    IconButton(
-                        onClick = { onCameraClick(shop.name) },
-                        enabled = isNearby
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.AddAPhoto,
-                            contentDescription = "写真を撮る",
-                            tint = if (isNearby) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.38f)
-                            }
-                        )
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        IconButton(onClick = { onGalleryClick(shop.name) }) {
+                            Icon(
+                                imageVector = Icons.Filled.PhotoLibrary,
+                                contentDescription = "ギャラリーから選ぶ",
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                        IconButton(
+                            onClick = { onCameraClick(shop.name) },
+                            enabled = isNearby
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.AddAPhoto,
+                                contentDescription = "写真を撮る",
+                                tint = if (isNearby) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.38f)
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -528,7 +573,8 @@ private fun ShopRowCard(
     distance: Float?,
     isNearby: Boolean,
     photoBitmap: androidx.compose.ui.graphics.ImageBitmap?,
-    onCameraClick: () -> Unit
+    onCameraClick: () -> Unit,
+    onGalleryClick: () -> Unit
 ) {
     val isVisited = count > 0
     Card(
@@ -613,16 +659,25 @@ private fun ShopRowCard(
                 }
             }
 
-            IconButton(onClick = onCameraClick) {
-                Icon(
-                    imageVector = Icons.Filled.AddAPhoto,
-                    contentDescription = "$name で写真を撮る",
-                    tint = if (isNearby) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                    }
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                IconButton(onClick = onGalleryClick) {
+                    Icon(
+                        imageVector = Icons.Filled.PhotoLibrary,
+                        contentDescription = "$name のギャラリーから選ぶ",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(onClick = onCameraClick) {
+                    Icon(
+                        imageVector = Icons.Filled.AddAPhoto,
+                        contentDescription = "$name で写真を撮る",
+                        tint = if (isNearby) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                        }
+                    )
+                }
             }
         }
     }
@@ -633,21 +688,4 @@ private fun formatDistanceForStamp(meters: Float): String = when {
     else -> "%.1f km".format(meters / 1000f)
 }
 
-private fun startCapture(
-    context: Context,
-    shopName: String,
-    onUriReady: (Uri) -> Unit,
-    launcher: androidx.activity.result.ActivityResultLauncher<Uri>
-) {
-    val tempFile = File(context.cacheDir, "capture_${shopName}.jpg").apply {
-        delete()
-        createNewFile()
-    }
-    val uri = FileProvider.getUriForFile(
-        context,
-        "${context.packageName}.fileprovider",
-        tempFile
-    )
-    onUriReady(uri)
-    launcher.launch(uri)
-}
+
