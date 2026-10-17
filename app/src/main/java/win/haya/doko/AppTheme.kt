@@ -1,18 +1,21 @@
 package win.haya.doko
 
+import android.app.Activity
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.core.view.WindowCompat
 
 internal val zenMaruGothicFont = FontFamily(
     Font(resId = R.font.zen_maru_gothic_regular, weight = FontWeight.Normal),
@@ -39,7 +42,7 @@ internal val appTypography = Typography().let { base ->
     )
 }
 
-private val lightColorScheme = lightColorScheme(
+internal val lightColorScheme = lightColorScheme(
     primary = primaryLight,
     onPrimary = onPrimaryLight,
     primaryContainer = primaryContainerLight,
@@ -77,7 +80,7 @@ private val lightColorScheme = lightColorScheme(
     surfaceContainerHighest = surfaceContainerHighestLight
 )
 
-private val darkColorScheme = darkColorScheme(
+internal val darkColorScheme = darkColorScheme(
     primary = primaryDark,
     onPrimary = onPrimaryDark,
     primaryContainer = primaryContainerDark,
@@ -115,19 +118,79 @@ private val darkColorScheme = darkColorScheme(
     surfaceContainerHighest = surfaceContainerHighestDark
 )
 
+private val yamaokayaColorScheme = darkColorScheme(
+    primary = primaryYamaokaya,
+    onPrimary = onPrimaryYamaokaya,
+    primaryContainer = primaryContainerYamaokaya,
+    onPrimaryContainer = onPrimaryContainerYamaokaya,
+    secondary = secondaryYamaokaya,
+    onSecondary = onSecondaryYamaokaya,
+    secondaryContainer = secondaryContainerYamaokaya,
+    onSecondaryContainer = onSecondaryContainerYamaokaya,
+    tertiary = tertiaryYamaokaya,
+    onTertiary = onTertiaryYamaokaya,
+    tertiaryContainer = tertiaryContainerYamaokaya,
+    onTertiaryContainer = onTertiaryContainerYamaokaya,
+    error = errorYamaokaya,
+    onError = onErrorYamaokaya,
+    errorContainer = errorContainerYamaokaya,
+    onErrorContainer = onErrorContainerYamaokaya,
+    background = backgroundYamaokaya,
+    onBackground = onBackgroundYamaokaya,
+    surface = surfaceYamaokaya,
+    onSurface = onSurfaceYamaokaya,
+    surfaceVariant = surfaceVariantYamaokaya,
+    onSurfaceVariant = onSurfaceVariantYamaokaya,
+    outline = outlineYamaokaya,
+    outlineVariant = outlineVariantYamaokaya,
+    scrim = scrimYamaokaya,
+    inverseSurface = inverseSurfaceYamaokaya,
+    inverseOnSurface = inverseOnSurfaceYamaokaya,
+    inversePrimary = inversePrimaryYamaokaya,
+    surfaceDim = surfaceDimYamaokaya,
+    surfaceBright = surfaceBrightYamaokaya,
+    surfaceContainerLowest = surfaceContainerLowestYamaokaya,
+    surfaceContainerLow = surfaceContainerLowYamaokaya,
+    surfaceContainer = surfaceContainerYamaokaya,
+    surfaceContainerHigh = surfaceContainerHighYamaokaya,
+    surfaceContainerHighest = surfaceContainerHighestYamaokaya
+)
+
+/**
+ * テーマごとの配色。設定画面のテーマ選択プレビューからも参照するため、
+ * 配色の定義はすべてここに集約する。
+ */
+@Composable
+internal fun colorSchemeFor(themeMode: ThemeMode): ColorScheme {
+    return when (themeMode) {
+        // 従来のダークテーマ。端末（Android 12 以降）の壁紙由来カラーをそのまま使う。
+        ThemeMode.DARK -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            dynamicDarkColorScheme(LocalContext.current)
+        } else {
+            darkColorScheme
+        }
+        ThemeMode.LIGHT -> lightColorScheme
+        ThemeMode.YAMAOKAYA -> yamaokayaColorScheme
+    }
+}
+
 @Composable
 fun YamaokayaTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    themeMode: ThemeMode = ThemeMode.DARK,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    val colorScheme = colorSchemeFor(themeMode)
+
+    // ステータスバー / ナビゲーションバーのアイコン色をテーマに合わせる。
+    // （ライトテーマで白アイコンが白背景に埋もれるのを防ぐ）
+    val view = LocalView.current
+    val window = (view.context as? Activity)?.window
+    if (window != null && !view.isInEditMode) {
+        SideEffect {
+            val controller = WindowCompat.getInsetsController(window, view)
+            controller.isAppearanceLightStatusBars = !themeMode.isDark
+            controller.isAppearanceLightNavigationBars = !themeMode.isDark
         }
-        darkTheme -> darkColorScheme
-        else -> lightColorScheme
     }
 
     MaterialTheme(

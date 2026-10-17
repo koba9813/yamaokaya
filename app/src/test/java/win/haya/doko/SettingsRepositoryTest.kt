@@ -1,0 +1,93 @@
+package win.haya.doko
+
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28])
+class SettingsRepositoryTest {
+
+    private lateinit var context: Context
+    private lateinit var repository: SettingsRepository
+
+    @Before
+    fun setup() {
+        context = ApplicationProvider.getApplicationContext()
+        context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit()
+        repository = SettingsRepository(context)
+    }
+
+    @Test
+    fun defaultSettings_useDarkTheme() {
+        val settings = repository.getSettings()
+
+        assertEquals(ThemeMode.DARK, settings.themeMode)
+        assertTrue(settings.proximityNotificationEnabled)
+        assertTrue(settings.trackerNotificationEnabled)
+        assertEquals(10, settings.locationUpdateIntervalSeconds)
+    }
+
+    @Test
+    fun save_persistsEveryThemeMode() {
+        ThemeMode.entries.forEach { mode ->
+            repository.save(repository.getSettings().copy(themeMode = mode))
+
+            assertEquals(mode, SettingsRepository(context).getSettings().themeMode)
+        }
+    }
+
+    @Test
+    fun save_persistsOtherSettingsWithTheme() {
+        repository.save(
+            AppSettings(
+                proximityNotificationEnabled = false,
+                trackerNotificationEnabled = false,
+                locationUpdateIntervalSeconds = 60,
+                themeMode = ThemeMode.YAMAOKAYA
+            )
+        )
+
+        val restored = SettingsRepository(context).getSettings()
+        assertEquals(false, restored.proximityNotificationEnabled)
+        assertEquals(false, restored.trackerNotificationEnabled)
+        assertEquals(60, restored.locationUpdateIntervalSeconds)
+        assertEquals(ThemeMode.YAMAOKAYA, restored.themeMode)
+    }
+
+    @Test
+    fun unknownStoredTheme_fallsBackToDark() {
+        context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+            .edit()
+            .putString("theme_mode", "unknown-theme")
+            .commit()
+
+        assertEquals(ThemeMode.DARK, SettingsRepository(context).getSettings().themeMode)
+    }
+
+    @Test
+    fun themeModeFromStorageKey_resolvesStoredValues() {
+        ThemeMode.entries.forEach { mode ->
+            assertEquals(mode, ThemeMode.fromStorageKey(mode.storageKey))
+        }
+        assertEquals(ThemeMode.DARK, ThemeMode.fromStorageKey(null))
+        assertEquals(ThemeMode.DARK, ThemeMode.fromStorageKey(""))
+    }
+
+    @Test
+    fun themeMode_isDarkOnlyForLightTheme() {
+        assertTrue(ThemeMode.DARK.isDark)
+        assertTrue(ThemeMode.YAMAOKAYA.isDark)
+        assertFalse(ThemeMode.LIGHT.isDark)
+    }
+}
