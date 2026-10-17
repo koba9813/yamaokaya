@@ -1,5 +1,7 @@
 package win.haya.doko
 
+import java.io.File
+
 data class Coordinates(val lat: Double, val lon: Double)
 
 data class RegisteredShop(
@@ -13,4 +15,10 @@ data class ShopInfo(
     val coordinates: Coordinates,
     val distanceMeters: Float,
     val bearingDegrees: Double
+)
+
+data class PhotoEntry(
+    val shopName: String,
+    val file: File,
+    val timestampMillis: Long
 )

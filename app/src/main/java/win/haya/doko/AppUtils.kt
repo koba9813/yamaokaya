@@ -1,5 +1,6 @@
 package win.haya.doko
 
+import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -8,6 +9,7 @@ import androidx.browser.customtabs.CustomTabsIntent
 
 private const val YAMAOKAYA_MENU_URL = "https://www.yamaokaya.com/menus/yamaokaya/regular/"
 
+@SuppressLint("DiscouragedApi")
 internal fun resolveDrawableId(context: Context, name: String): Int {
     return context.resources.getIdentifier(name, "drawable", context.packageName)
 }

@@ -55,13 +55,15 @@ class YamaokayaWidgetProvider : AppWidgetProvider() {
             bindData(context, views, layoutId)
 
             val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-            val pendingIntent = PendingIntent.getActivity(
-                context,
-                0,
-                launchIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
+            if (launchIntent != null) {
+                val pendingIntent = PendingIntent.getActivity(
+                    context,
+                    0,
+                    launchIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
+            }
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
@@ -142,8 +144,12 @@ class YamaokayaWidgetProvider : AppWidgetProvider() {
         }
 
         private fun setDefaultMessage(views: RemoteViews, layoutId: Int, message: String) {
-            views.setTextViewText(R.id.widget_shop_name, message)
-            views.setTextViewText(R.id.widget_distance, "--")
+            if (layoutId == R.layout.widget_yamaokaya_tall) {
+                views.setTextViewText(R.id.widget_title, message)
+            } else {
+                views.setTextViewText(R.id.widget_shop_name, message)
+                views.setTextViewText(R.id.widget_distance, "--")
+            }
             if (layoutId == R.layout.widget_yamaokaya_tall) {
                 bindMultipleShops(views, emptyList())
             }

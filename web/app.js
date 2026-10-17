@@ -1,70 +1,70 @@
-const registeredShops = [
-    { coordinates: { lat: 36.397650673276345, lon: 140.50535377876412 }, name: "山岡家 ひたちなか店" },
-    { coordinates: { lat: 36.366183045752884, lon: 140.48297166948979 }, name: "山岡家 水戸城南店" },
-    { coordinates: { lat: 36.537558996534784, lon: 140.63643157503827 }, name: "山岡家 日立金沢店" },
-    { coordinates: { lat: 36.537658129508564, lon: 140.41588693877145 }, name: "山岡家 常陸大宮店" },
-    { coordinates: { lat: 36.377374656642665, lon: 140.3608206027508 }, name: "山岡家 水戸内原店" },
-    { coordinates: { lat: 36.31298564606419, lon: 140.44880778716356 }, name: "山岡家 水戸南店" },
-    { coordinates: { lat: 36.19229574055287, lon: 140.2941730730318 }, name: "山岡家 石岡店" },
-    { coordinates: { lat: 36.13136315812844, lon: 140.22564799696343 }, name: "山岡家 かすみがうら店" },
-    { coordinates: { lat: 36.085492839913535, lon: 140.2060142271692 }, name: "山岡家 土浦店" },
-    { coordinates: { lat: 36.07663120071107, lon: 140.1059249155306 }, name: "山岡家 つくば中央店" },
-    { coordinates: { lat: 36.04915550750586, lon: 140.0848427526962 }, name: "山岡家 谷田部店" },
-    { coordinates: { lat: 35.99932258990889, lon: 140.1533127114314 }, name: "山岡家 牛久店" },
-    { coordinates: { lat: 35.915208766063834, lon: 140.63690426791038 }, name: "山岡家 神栖店" }
+const SEARCH_RADIUS_METERS = 100000;
+const KOKO_RADIUS_METERS = 50;
+const CHECK_IN_COOLDOWN_MS = 3 * 60 * 60 * 1000;
+const MENU_URL = 'https://www.yamaokaya.com/menus/yamaokaya/regular/';
+
+const imageFiles = [
+    'yamaokaya.png',
+    'gyoza.png',
+    'miso.jpg',
+    'shio.jpg',
+    'tokusei_miso.jpg',
+    'kara_miso.jpg'
 ];
 
-const SEARCH_RADIUS_METERS = 100000;
-const KOKO_RADIUS_METERS = 100;
-const SPECIAL_EFFECT_RADIUS_METERS = 50;
-
-const imageFiles = ["yamaokaya.png", "gyoza.png", "miso.jpg", "shio.jpg", "tokusei_miso.jpg", "kara_miso.jpg"];
+let registeredShops = [];
 let selectedImageIndex = 0;
 
 let currentHeadingDegrees = 0;
 let currentLocation = null;
 let nearestShop = null;
-
 let watchId = null;
 
-// Animation state
-let currentRotation = 0; // Smooth rotation value
-let targetRotation = 0;  // Target rotation value based on sensors
+let currentRotation = 0;
+let targetRotation = 0;
 
 // DOM Elements
-const overlay = document.getElementById("permission-overlay");
-const btnRequestPermission = document.getElementById("btn-request-permission");
-const titleText = document.getElementById("title-text");
-const loadingView = document.getElementById("loading-view");
-const errorView = document.getElementById("error-view");
-const distanceView = document.getElementById("distance-view");
-const errorMessage = document.getElementById("error-message");
-const btnRetry = document.getElementById("btn-retry");
-const kokoBox = document.getElementById("koko-special-announcement");
-const kokoShopName = document.getElementById("koko-shop-name");
-const distanceText = document.getElementById("distance-text");
-const actionButtonsContainer = document.getElementById("action-buttons-container");
-const btnAction = document.getElementById("btn-action");
-const directionImage = document.getElementById("direction-image");
+const overlay = document.getElementById('permission-overlay');
+const btnRequestPermission = document.getElementById('btn-request-permission');
+const titleText = document.getElementById('title-text');
+const loadingView = document.getElementById('loading-view');
+const errorView = document.getElementById('error-view');
+const distanceView = document.getElementById('distance-view');
+const errorMessage = document.getElementById('error-message');
+const btnRetry = document.getElementById('btn-retry');
+const kokoBox = document.getElementById('koko-special-announcement');
+const kokoShopName = document.getElementById('koko-shop-name');
+const distanceText = document.getElementById('distance-text');
+const actionButtonsContainer = document.getElementById('action-buttons-container');
+const btnAction = document.getElementById('btn-action');
+const directionImage = document.getElementById('direction-image');
+const btnShare = document.getElementById('btn-share');
+const btnMenu = document.getElementById('btn-menu');
+const feedbackMessage = document.getElementById('feedback-message');
+const versionText = document.getElementById('version-text');
 
-// Math util
+versionText.textContent = 'Ver Web PWA';
+
+// ---------- Math utilities ----------
+function toRad(deg) { return deg * Math.PI / 180; }
+
 function calculateDistanceMeters(from, to) {
     const R = 6371e3;
-    const p1 = from.lat * Math.PI / 180;
-    const p2 = to.lat * Math.PI / 180;
-    const dp = (to.lat - from.lat) * Math.PI / 180;
-    const dl = (to.lon - from.lon) * Math.PI / 180;
-    const a = Math.sin(dp/2) * Math.sin(dp/2) +
+    const p1 = toRad(from.lat);
+    const p2 = toRad(to.lat);
+    const dp = toRad(to.lat - from.lat);
+    const dl = toRad(to.lon - from.lon);
+    const a = Math.sin(dp / 2) * Math.sin(dp / 2) +
               Math.cos(p1) * Math.cos(p2) *
-              Math.sin(dl/2) * Math.sin(dl/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+              Math.sin(dl / 2) * Math.sin(dl / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
 }
 
 function calculateBearing(from, to) {
-    const lat1 = from.lat * Math.PI / 180;
-    const lat2 = to.lat * Math.PI / 180;
-    const deltaLon = (to.lon - from.lon) * Math.PI / 180;
+    const lat1 = toRad(from.lat);
+    const lat2 = toRad(to.lat);
+    const deltaLon = toRad(to.lon - from.lon);
     const y = Math.sin(deltaLon) * Math.cos(lat2);
     const x = Math.cos(lat1) * Math.sin(lat2) -
               Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLon);
@@ -72,175 +72,239 @@ function calculateBearing(from, to) {
     return (bearing + 360) % 360;
 }
 
+function normalizeDegrees(value) {
+    let normalized = value % 360;
+    if (normalized < 0) normalized += 360;
+    return normalized;
+}
+
+function formatDistance(meters) {
+    if (meters < 1000) {
+        return `${Math.round(meters)} m`;
+    }
+    return `${(meters / 1000).toFixed(2)} km`;
+}
+
 function findNearestShop(currentLat, currentLon) {
-    let nearest = null;
     const current = { lat: currentLat, lon: currentLon };
+    let nearest = null;
     for (const shop of registeredShops) {
-        const dist = calculateDistanceMeters(current, shop.coordinates);
+        const dist = calculateDistanceMeters(current, shop);
         if (dist > SEARCH_RADIUS_METERS) continue;
-        const bearing = calculateBearing(current, shop.coordinates);
         if (!nearest || dist < nearest.distanceMeters) {
             nearest = {
                 name: shop.name,
-                coordinates: shop.coordinates,
+                prefecture: shop.prefecture,
+                coordinates: { lat: shop.lat, lon: shop.lon },
                 distanceMeters: dist,
-                bearingDegrees: bearing
+                bearingDegrees: calculateBearing(current, shop)
             };
         }
     }
     return nearest;
 }
 
-// Smoothing / Loop
-function animate() {
-    // Shortest path interpolation for 360 wrap-around
-    let diff = targetRotation - currentRotation;
-    while (diff < -180) diff += 360;
-    while (diff > 180) diff -= 360;
-    
-    // Smooth factor (smaller = smoother, larger = snappier)
-    currentRotation += diff * 0.15; 
-    
-    directionImage.style.transform = `rotate(${currentRotation}deg)`;
-    requestAnimationFrame(animate);
+// ---------- UI helpers ----------
+function showLoading() {
+    loadingView.style.display = 'flex';
+    errorView.style.display = 'none';
+    distanceView.style.display = 'none';
+}
+
+function showError(msg) {
+    loadingView.style.display = 'none';
+    distanceView.style.display = 'none';
+    errorView.style.display = 'flex';
+    errorMessage.textContent = 'エラー: ' + msg;
+}
+
+function showDistance() {
+    loadingView.style.display = 'none';
+    errorView.style.display = 'none';
+    distanceView.style.display = 'flex';
 }
 
 function updateState() {
     if (!nearestShop) return;
 
     const isKoko = nearestShop.distanceMeters <= KOKO_RADIUS_METERS;
-    const isSpecialRange = nearestShop.distanceMeters <= SPECIAL_EFFECT_RADIUS_METERS;
 
-    // Title
-    titleText.textContent = isKoko ? "Yamaokaya is Koko!!!" : "Yamaokaya is Doko";
+    titleText.textContent = isKoko ? 'Yamaokaya is Koko!!!' : 'Yamaokaya is Doko';
 
-    // UI elements update
+    const imageHint = document.querySelector('.image-hint');
     if (isKoko) {
-        if (isSpecialRange) {
-            distanceText.style.display = "none";
-            kokoBox.style.display = "flex";
-            kokoShopName.textContent = nearestShop.name + " is Koko!!!";
-            btnAction.classList.add("btn-large");
-        } else {
-            kokoBox.style.display = "none";
-            distanceText.style.display = "block";
-            distanceText.textContent = Math.round(nearestShop.distanceMeters) + " m";
-            btnAction.classList.remove("btn-large");
-        }
-        actionButtonsContainer.style.display = "block";
+        distanceText.style.display = 'none';
+        kokoBox.style.display = 'flex';
+        kokoShopName.textContent = nearestShop.name + ' is Koko!!!';
+        actionButtonsContainer.style.display = 'block';
+        directionImage.style.display = 'none';
+        if (imageHint) imageHint.style.display = 'none';
     } else {
-        kokoBox.style.display = "none";
-        distanceText.style.display = "block";
-        distanceText.textContent = (nearestShop.distanceMeters / 1000).toFixed(2) + " km";
-        actionButtonsContainer.style.display = "none";
+        kokoBox.style.display = 'none';
+        distanceText.style.display = 'block';
+        distanceText.textContent = formatDistance(nearestShop.distanceMeters);
+        actionButtonsContainer.style.display = 'none';
+        directionImage.style.display = 'block';
+        if (imageHint) imageHint.style.display = 'block';
     }
 
-    // Update target rotation for the animation loop
+    btnShare.style.display = 'flex';
+    btnMenu.style.display = 'flex';
+
     targetRotation = nearestShop.bearingDegrees - currentHeadingDegrees;
 }
 
-function startTracking() {
-    overlay.style.display = "none";
-    showLoading();
-
-    if ("geolocation" in navigator) {
-        watchId = navigator.geolocation.watchPosition(
-            (position) => {
-                currentLocation = { lat: position.coords.latitude, lon: position.coords.longitude };
-                nearestShop = findNearestShop(currentLocation.lat, currentLocation.lon);
-                if (nearestShop) {
-                    showDistance();
-                    document.getElementById("btn-share").style.display = "flex";
-                    updateState();
-                } else {
-                    showError("100km以内に山岡家が見つかりませんでした。");
-                }
-            },
-            (err) => showError("位置情報の取得に失敗しました。 (" + err.message + ")"),
-            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
-        );
-    } else {
-        showError("お使いのブラウザは位置情報サービスに対応していません。");
-    }
-
-    // Orientation
-    if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission().then(state => {
-            if (state === 'granted') window.addEventListener('deviceorientation', handleOrientation);
-        }).catch(console.error);
-    } else {
-        window.addEventListener('deviceorientationabsolute', handleOrientation);
-        window.addEventListener('deviceorientation', handleOrientation);
-    }
-
-    // Start loop
+function animate() {
+    let diff = targetRotation - currentRotation;
+    while (diff < -180) diff += 360;
+    while (diff > 180) diff -= 360;
+    currentRotation += diff * 0.12;
+    directionImage.style.transform = `rotate(${currentRotation}deg)`;
     requestAnimationFrame(animate);
 }
 
+// ---------- Orientation ----------
 function handleOrientation(event) {
     let heading = 0;
-    if (event.webkitCompassHeading) {
+    if (event.webkitCompassHeading != null) {
         heading = event.webkitCompassHeading;
-    } else if (event.absolute === true && event.alpha !== null) {
+    } else if (event.absolute === true && event.alpha != null) {
         heading = 360 - event.alpha;
-    } else {
-        heading = event.alpha ? 360 - event.alpha : 0;
+    } else if (event.alpha != null) {
+        heading = 360 - event.alpha;
     }
     currentHeadingDegrees = heading;
     updateState();
 }
 
-function showLoading() {
-    loadingView.style.display = "flex";
-    errorView.style.display = "none";
-    distanceView.style.display = "none";
+function requestOrientationPermission() {
+    return new Promise((resolve) => {
+        if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission()
+                .then((state) => {
+                    if (state === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation);
+                    }
+                    resolve(state);
+                })
+                .catch((err) => {
+                    console.error('Device orientation permission error:', err);
+                    resolve('denied');
+                });
+        } else if ('ondeviceorientationabsolute' in window) {
+            window.addEventListener('deviceorientationabsolute', handleOrientation);
+            resolve('granted');
+        } else {
+            window.addEventListener('deviceorientation', handleOrientation);
+            resolve('granted');
+        }
+    });
 }
 
-function showError(msg) {
-    loadingView.style.display = "none";
-    distanceView.style.display = "none";
-    errorView.style.display = "flex";
-    errorMessage.textContent = "エラー: " + msg;
+// ---------- Location ----------
+function startLocationTracking() {
+    if (!('geolocation' in navigator)) {
+        showError('お使いのブラウザは位置情報サービスに対応していません。');
+        return;
+    }
+
+    watchId = navigator.geolocation.watchPosition(
+        (position) => {
+            currentLocation = {
+                lat: position.coords.latitude,
+                lon: position.coords.longitude
+            };
+            nearestShop = findNearestShop(currentLocation.lat, currentLocation.lon);
+            if (nearestShop) {
+                showDistance();
+                updateState();
+            } else {
+                showError('100km以内に山岡家が見つかりませんでした。');
+            }
+        },
+        (err) => {
+            showError('位置情報の取得に失敗しました。 (' + err.message + ')');
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+    );
 }
 
-function showDistance() {
-    loadingView.style.display = "none";
-    errorView.style.display = "none";
-    distanceView.style.display = "flex";
+// ---------- Controls ----------
+async function startTracking() {
+    overlay.style.display = 'none';
+    showLoading();
+
+    // Load shop data if not already loaded
+    if (registeredShops.length === 0) {
+        try {
+            const response = await fetch('./shops.json');
+            if (!response.ok) throw new Error('shops.json の読み込みに失敗しました');
+            registeredShops = await response.json();
+        } catch (err) {
+            showError(err.message || '店舗データの読み込みに失敗しました。');
+            return;
+        }
+    }
+
+    await requestOrientationPermission();
+    startLocationTracking();
+    requestAnimationFrame(animate);
 }
 
-// Listeners
-btnRequestPermission.addEventListener("click", startTracking);
-btnRetry.addEventListener("click", () => {
+btnRequestPermission.addEventListener('click', startTracking);
+
+btnRetry.addEventListener('click', () => {
     if (watchId !== null) navigator.geolocation.clearWatch(watchId);
     startTracking();
 });
-directionImage.addEventListener("click", () => {
+
+directionImage.addEventListener('click', () => {
     selectedImageIndex = (selectedImageIndex + 1) % imageFiles.length;
     directionImage.src = `img/${imageFiles[selectedImageIndex]}`;
 });
-btnAction.addEventListener("click", () => {
-    alert("Web版ではチェックイン機能は未実装です。山岡家公式サイトをご覧ください！");
-    window.open("https://www.yamaokaya.com/menus/yamaokaya/regular/", "_blank");
-});
-document.getElementById("btn-share").addEventListener("click", () => {
-    if (nearestShop) {
-        const text = `山岡家 ${nearestShop.name} まで ${nearestShop.distanceMeters > 1000 ? (nearestShop.distanceMeters/1000).toFixed(2) + 'km' : Math.round(nearestShop.distanceMeters) + 'm'}\n#YamaokayaisDoko`;
-        if (navigator.share) {
-            navigator.share({ title: 'Yamaokaya is Doko', text: text, url: 'https://koba9813.github.io/yamaokaya/' }).catch(console.error);
-        } else {
-            alert(`シェア内容:\n${text}`);
-        }
+
+btnShare.addEventListener('click', () => {
+    if (!nearestShop) return;
+    const text = `山岡家 ${nearestShop.name} まで ${formatDistance(nearestShop.distanceMeters)}\n#YamaokayaisDoko`;
+    if (navigator.share) {
+        navigator.share({
+            title: 'Yamaokaya is Doko',
+            text: text,
+            url: 'https://koba9813.github.io/yamaokaya/'
+        }).catch(() => {});
+    } else {
+        alert(`シェア内容:\n${text}`);
     }
 });
 
-// Service Worker Registration for PWA
+btnMenu.addEventListener('click', () => {
+    window.open(MENU_URL, '_blank');
+});
+
+btnAction.addEventListener('click', () => {
+    if (!nearestShop) return;
+    const key = `checkin_${nearestShop.name}`;
+    const last = parseInt(localStorage.getItem(key) || '0', 10);
+    const now = Date.now();
+    if (now - last < CHECK_IN_COOLDOWN_MS) {
+        const remain = CHECK_IN_COOLDOWN_MS - (now - last);
+        const minutes = Math.ceil(remain / 60000);
+        feedbackMessage.textContent = `同じ店舗のチェックインは3時間に1回までです（あと${minutes}分）`;
+        feedbackMessage.style.display = 'block';
+        return;
+    }
+    localStorage.setItem(key, String(now));
+    feedbackMessage.textContent = `${nearestShop.name} にチェックインしました！`;
+    feedbackMessage.style.display = 'block';
+});
+
+// ---------- Service Worker ----------
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').then(reg => {
-            console.log('ServiceWorker registration successful with scope: ', reg.scope);
-        }, err => {
-            console.error('ServiceWorker registration failed: ', err);
+        navigator.serviceWorker.register('./sw.js').then((reg) => {
+            console.log('ServiceWorker registered:', reg.scope);
+        }, (err) => {
+            console.error('ServiceWorker registration failed:', err);
         });
     });
 }

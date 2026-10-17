@@ -22,6 +22,9 @@ class YamaokayaViewModel(application: Application) : AndroidViewModel(applicatio
     private val _nearestShop = mutableStateOf<ShopInfo?>(null)
     val nearestShop: State<ShopInfo?> = _nearestShop
 
+    private val _currentCoordinates = mutableStateOf<Coordinates?>(null)
+    val currentCoordinates: State<Coordinates?> = _currentCoordinates
+
     private val _headingDegrees = mutableFloatStateOf(0f)
     val headingDegrees: State<Float> = _headingDegrees
 
@@ -102,18 +105,21 @@ class YamaokayaViewModel(application: Application) : AndroidViewModel(applicatio
         )
 
         stopHeading = startHeadingUpdates(context) { heading ->
-            _headingDegrees.value = heading
+            _headingDegrees.floatValue = heading
         }
     }
 
     private fun handleLocationUpdate(location: Location) {
         val current = Coordinates(location.latitude, location.longitude)
+        _currentCoordinates.value = current
         val nearest = YamaokayaFinder.findNearest(current)
         _nearestShop.value = nearest
         _isLoading.value = false
 
         if (nearest != null && nearest.distanceMeters <= KOKO_RADIUS_METERS) {
-            maybeSendKokoNotification(nearest.name)
+            if (_appSettings.value.proximityNotificationEnabled) {
+                maybeSendKokoNotification(nearest.name)
+            }
         }
 
         if (_appSettings.value.trackerNotificationEnabled) {

@@ -12,24 +12,43 @@ android {
         applicationId = "win.haya.doko"
         minSdk = 24
         targetSdk = 35
-        versionCode = 2
-        versionName = "V.beta2.0"
+        versionCode = 3
+        versionName = "V.beta3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Release signing secrets are read from environment variables so they are never committed.
+    // Set these before building a release APK:
+    //   RELEASE_KEYSTORE_PATH
+    //   RELEASE_KEYSTORE_PASSWORD
+    //   RELEASE_KEY_ALIAS
+    //   RELEASE_KEY_PASSWORD
+    val releaseKeystorePath = providers.environmentVariable("RELEASE_KEYSTORE_PATH").orNull
+    val releaseStorePassword = providers.environmentVariable("RELEASE_KEYSTORE_PASSWORD").orNull
+    val releaseKeyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").orNull
+    val releaseKeyPassword = providers.environmentVariable("RELEASE_KEY_PASSWORD").orNull
+    val canSignRelease = releaseKeystorePath != null &&
+            releaseStorePassword != null &&
+            releaseKeyAlias != null &&
+            releaseKeyPassword != null
+
     signingConfigs {
-        create("release") {
-            storeFile = file("release-key.jks")
-            storePassword = "yamaokaya-release"
-            keyAlias = "yamaokaya"
-            keyPassword = "yamaokaya-release"
+        if (canSignRelease) {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            if (canSignRelease) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -72,6 +91,9 @@ dependencies {
     // Compose Material3
     implementation("androidx.compose.material3:material3")
 
+    // Compose Material Icons Extended（AddAPhoto 等）
+    implementation("androidx.compose.material:material-icons-extended")
+
     // Compose Foundation (layout, scroll, shapes, clickable, Image, etc.)
     implementation("androidx.compose.foundation:foundation")
 
@@ -89,6 +111,7 @@ dependencies {
 
     // AndroidX Core
     implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.core:core-splashscreen:1.0.1")
 
     // Kotlin Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")

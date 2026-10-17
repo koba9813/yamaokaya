@@ -36,6 +36,7 @@ internal fun sendKokoNotification(context: Context) {
     if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
 
     val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        ?: return
     val pendingIntent = PendingIntent.getActivity(
         context, 0, launchIntent,
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
