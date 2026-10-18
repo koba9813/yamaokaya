@@ -7,7 +7,7 @@
 - リポジトリ: `https://github.com/koba9813/yamaokaya`
 - ブランチ: `main`
 - パッケージ名: `win.haya.doko`
-- 現在のバージョン: `V.beta3.0`（`app/build.gradle.kts` の `versionName`、`versionCode = 3`）
+- 現在のバージョン: `V.beta3.1`（`app/build.gradle.kts` の `versionName`、`versionCode = 4`）
 
 ## 技術スタック
 
@@ -22,10 +22,12 @@
 
 ### 直近のコミット
 
-1. `146b2db` 店舗データを更新（152店舗 → 198店舗）
-2. `dccc6a1` ダーク/ライト/山岡家のテーマ切り替え機能を追加
-3. `508bcf2` カメラとギャラリーのUIを刷新
-4. `ff6a909` Add in-app update flow and agent handoff notes（アプリ内アップデート機能）
+1. `e15d9f0` V.beta3.1 に更新（versionCode 4）
+2. `5e36e4c` データの引き継ぎ（バックアップ書き出し／読み込み）機能を追加
+3. `146b2db` 店舗データを更新（152店舗 → 198店舗）
+4. `dccc6a1` ダーク/ライト/山岡家のテーマ切り替え機能を追加
+5. `508bcf2` カメラとギャラリーのUIを刷新
+6. `ff6a909` Add in-app update flow and agent handoff notes（アプリ内アップデート機能）
 
 ### 実装済み: テーマ切り替え
 
@@ -43,6 +45,31 @@
 - ギャラリーは Coil + 店舗名検索 / 店舗フィルタ / 複数選択と一括削除 / ピンチズーム表示
 - カメラ画面と写真ビューアは意図的に黒背景（メディア表示のためテーマ非依存）
 
+### 実装済み: データの引き継ぎ（バックアップ）
+
+- 写真・スタンプラリー・設定を 1 つの ZIP（`manifest.json` / `stamps.json` / `settings.json` / `photos.json` / `photos/*.webp`）にまとめ、SAF（Storage Access Framework）の `CreateDocument` / `OpenDocument` で保存・復元
+- 書き出し後は共有用コピーを `cacheDir/backup_share/` に作成し、共有シートで他端末へ送信可能
+- 読み込みは **追加で読み込む（マージ）** と **完全に置き換える** の 2 方式
+  - 追加: 重複写真（店舗名＋タイムスタンプ一致）はスキップ、スタンプは回数が多い方／日時が新しい方を採用、設定は変えない
+  - 置き換え: 写真を別フォルダー（`shop_photos_staging`）へ書き出してから `shop_photos` と入れ替えるため、途中で失敗しても既存の写真は残る
+- 外部バックアップ由来の値は検証してから保存
+  - 店舗名の長さ 50 文字以内、パス区切り・ `"."` / `".."` を正規化・除外
+  - チェックイン回数は `0..100_000` にクランプ、未来日時は現在時刻にクランプ
+  - 位置情報更新間隔は `{5,10,30,60}` 以外なら既定値 10 秒に丸める
+  - テーマは不明なら `DARK` にフォールバック
+- パストラバーサル対策：エントリー ID に `/` や `..` を含むものは読み込まない
+- ZIP 爆弾対策：JSON 8 MB / 写真 1 枚 32 MB / 合計展開 1 GB の上限
+- 写真情報が欠けたバックアップ（`photos.json` にない写真ファイル、または `manifest.json` の `photoCount` と実数が不一致）は、データを触る前にエラーとして弾く
+- 単体テスト 13 件追加（合計 42 件、全件成功）
+- 関連ファイル:
+  - `app/src/main/java/win/haya/doko/BackupManager.kt` — 書き出し／読み込みの核心ロジック
+  - `app/src/main/java/win/haya/doko/BackupSection.kt` — 設定画面の UI と SAF 連携
+  - `app/src/main/java/win/haya/doko/PhotoRepository.kt` — `containsPhoto` / `saveImportedPhoto` / `replaceAllWith` / `sanitize` 強化
+  - `app/src/main/java/win/haya/doko/StampRepository.kt` — `getAllRecords` / `restoreFromBackup` / `mergeStampStates`
+  - `app/src/main/java/win/haya/doko/SettingsRepository.kt` — `normalizeLocationUpdateInterval`
+  - `app/src/main/res/xml/file_paths.xml` — FileProvider を用途別サブフォルダーに限定
+  - `app/src/test/java/win/haya/doko/BackupManagerTest.kt` — 13 件のユニットテスト
+
 ### 実装済み: アプリ内アップデート
 
 GitHub Releases から最新 APK を自動確認し、アプリ内でダウンロード・インストールする機能があります。
@@ -51,6 +78,7 @@ GitHub Releases から最新 APK を自動確認し、アプリ内でダウン�
 - 手動チェック: 設定画面「アップデート」セクションから確認可能
 - 新しいバージョンがある場合、ダイアログでリリースノートを表示し、「ダウンロードしてインストール」で APK を取得・インストール
 - 必要に応じて「不明なアプリのインストール」権限設定画面を開く
+- APK ダウンロードに HTTP ステータスとサイズの検証を追加（途中で切れたダウンロードを検出）
 
 関連ファイル:
 - `app/src/main/java/win/haya/doko/UpdateChecker.kt`
@@ -114,15 +142,15 @@ GitHub Releases から最新 APK を自動確認し、アプリ内でダウン�
 - 実際の値はリポジトリ外の `C:\Users\user\.yamaokaya\keystore.properties` に保存済み（keystore: `release.keystore`、alias: `yamaokaya`）
 - `.gitignore` で `*.jks`, `*.crt`, `app/release/` は無視されています
 
-### リリース手順（例: V.beta3.0）
+### リリース手順（例: V.beta3.1）
 
-1. `app/build.gradle.kts` の `versionCode` / `versionName` を更新
+1. `app/build.gradle.kts` の `versionCode` / `versionName` を更新（`V.beta3.1` / `4`）
 2. 署名用の環境変数を設定して `:app:assembleRelease` を実行（出力: `app/build/outputs/apk/release/app-release.apk`）
-3. GitHub Release を作成（タグ `V.betaX.Y`、アセット名 `Yamaokaya_betaX.Y_<Flavor>.apk`）
+3. GitHub Release を作成（タグ `V.beta3.1`、アセット名 `Yamaokaya_beta3.1.apk`）
 4. **必ず通常リリースとして公開する**（prerelease / draft は `/releases/latest` から見えず、アプリ内アップデートが反応しない）
 5. アプリ内アップデートが動くのは、公開 APK がインストール済みアプリと同じ鍵で署名されている場合のみ（旧鍵の V.beta2.0 以前からは更新不可）
 
-- 過去のリリース命名: V.beta1.0 Syoyu / V.beta1.1 Miso / V.beta1.2 Shio / V.beta2.0 Karamiso
+- 過去のリリース命名: V.beta1.0 Syoyu / V.beta1.1 Miso / V.beta1.2 Shio / V.beta2.0 Karamiso / V.beta3.0 Tokusei Miso / V.beta3.1
 - `gh` CLI は未インストール。GitHub API を叩く場合は Windows 資格情報マネージャーのトークンを使用（`"protocol=https\`nhost=github.com\`n" | git credential fill`）
 
 ## 既知の課題・次のステップ候補
@@ -130,11 +158,15 @@ GitHub Releases から最新 APK を自動確認し、アプリ内でダウン�
 - [x] デバッグ APK の実機インストール
 - [x] アプリ内アップデートの実機動作確認
 - [x] テーマ切り替えの実機確認（3テーマ + 再起動後の復元）
+- [x] データの引き継ぎ（バックアップ書き出し／読み込み）機能の実装
+- [x] バックアップ読み込みの堅牢化（パストラバーサル拒否、サイズ上限、値の検証、置き換え時の原子的入れ替え）
+- [x] V.beta3.1 としてリリース（versionCode 4、同一署名）
 - [ ] 「このバージョンをスキップ」機能の追加（毎回ダイアログが出るのを防ぐ）
 - [ ] 最終アップデート確認日時の保存（起動ごとに API を叩きすぎないように）
 - [ ] 山岡家テーマの見出し赤色のコントラスト改善（必要なら `primaryLight` / `primaryYamaokaya` を明るめに調整）
 - [ ] ホーム画面ウィジェットをテーマ配色に追従させるか検討
 - [ ] Web 側と Android 側のバージョン管理・リリースフローの整理
+- [ ] バックアップ機能の実機動作確認（書き出し・読み込み・共有・置き換えの一連の流れ）
 
 ## ユーザー情報
 
