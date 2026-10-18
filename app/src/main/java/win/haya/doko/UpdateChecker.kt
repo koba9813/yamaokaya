@@ -27,6 +27,9 @@ internal object UpdateChecker {
     private const val RELEASE_API_URL =
         "https://api.github.com/repos/koba9813/yamaokaya/releases/latest"
 
+    /** ダウンロードする APK の上限サイズ（壊れた応答や過大なファイル対策）。 */
+    private const val MAX_APK_BYTES = 200 * 1024 * 1024
+
     suspend fun checkForUpdate(context: Context): ReleaseInfo? = withContext(Dispatchers.IO) {
         val currentVersion = getAppVersionName(context)
         val connection = URL(RELEASE_API_URL).openConnection() as HttpURLConnection
@@ -70,7 +73,10 @@ internal object UpdateChecker {
         url: String,
         onProgress: (Float) -> Unit
     ): File = withContext(Dispatchers.IO) {
-        val outputFile = File(context.cacheDir, "update.apk")
+        val outputDir = File(context.cacheDir, "updates").apply {
+            if (!exists()) mkdirs()
+        }
+        val outputFile = File(outputDir, "update.apk")
         outputFile.delete()
 
         val connection = URL(url).openConnection() as HttpURLConnection
@@ -81,7 +87,20 @@ internal object UpdateChecker {
         }
 
         try {
-            val totalBytes = connection.contentLength.takeIf { it > 0 } ?: -1
+            val responseCode = connection.responseCode
+            if (responseCode != 200) {
+                throw RuntimeException("ダウンロードに失敗しました（HTTP $responseCode）")
+            }
+
+            // 途中で切れた APK をインストールしようとすると失敗するため、サイズを確認する
+            val totalBytes = connection.contentLength
+            if (totalBytes <= 0) {
+                throw RuntimeException("ファイルサイズを確認できませんでした。通信環境を変えて、もう一度お試しください")
+            }
+            if (totalBytes > MAX_APK_BYTES) {
+                throw RuntimeException("ファイルサイズが大きすぎます")
+            }
+
             connection.inputStream.use { input ->
                 outputFile.outputStream().use { output ->
                     val buffer = ByteArray(8192)
@@ -90,12 +109,20 @@ internal object UpdateChecker {
                     while (input.read(buffer).also { read = it } != -1) {
                         output.write(buffer, 0, read)
                         downloaded += read
-                        if (totalBytes > 0) {
-                            onProgress(downloaded.toFloat() / totalBytes)
+                        if (downloaded > MAX_APK_BYTES) {
+                            throw RuntimeException("ファイルサイズが大きすぎます")
                         }
+                        onProgress(downloaded.toFloat() / totalBytes)
                     }
                 }
             }
+
+            // 途中で切れた APK をインストールしようとすると失敗するため、サイズを検証する
+            if (outputFile.length() != totalBytes.toLong()) {
+                outputFile.delete()
+                throw RuntimeException("ダウンロードが途中で終了しました。もう一度お試しください")
+            }
+
             outputFile
         } finally {
             connection.disconnect()

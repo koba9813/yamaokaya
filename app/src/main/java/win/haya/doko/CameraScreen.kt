@@ -1,7 +1,6 @@
 package win.haya.doko
 
 import android.content.Context
-import android.net.Uri
 import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
@@ -191,7 +190,10 @@ internal fun CameraCaptureScreen(
                     onClick = {
                         if (isCapturing) return@IconButton
                         isCapturing = true
-                        val outFile = File(context.cacheDir, "capture_${System.currentTimeMillis()}.jpg")
+                        val captureDir = File(context.cacheDir, "captures").apply {
+                            if (!exists()) mkdirs()
+                        }
+                        val outFile = File(captureDir, "capture_${System.currentTimeMillis()}.jpg")
                         val outputOptions = ImageCapture.OutputFileOptions.Builder(outFile).build()
                         val executor: Executor = ContextCompat.getMainExecutor(context)
                         imageCapture.takePicture(
@@ -235,8 +237,3 @@ internal fun CameraCaptureScreen(
         }
     }
 }
-
-// helper to convert file to uri not needed here
-@Suppress("unused")
-private fun fileUri(context: Context, file: File): Uri =
-    androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)

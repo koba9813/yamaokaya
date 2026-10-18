@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <cache-path name="shared_images" path="." />
+    <!-- FileProvider で共有するのは用途別のサブフォルダだけに限定する（cacheDir 全体は公開しない） -->
+    <cache-path name="captures" path="captures/" />
+    <cache-path name="updates" path="updates/" />
+    <cache-path name="backup_share" path="backup_share/" />
     <files-path name="shop_photos" path="shop_photos/" />
 </paths>

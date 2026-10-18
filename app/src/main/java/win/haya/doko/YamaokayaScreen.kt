@@ -7,7 +7,6 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import java.io.File
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility

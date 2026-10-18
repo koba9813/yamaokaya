@@ -66,6 +66,29 @@ class SettingsRepositoryTest {
     }
 
     @Test
+    fun invalidStoredInterval_fallsBackToDefault() {
+        context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+            .edit()
+            .putInt("location_update_interval", 0)
+            .commit()
+
+        assertEquals(
+            SettingsRepository.DEFAULT_LOCATION_INTERVAL_SECONDS,
+            SettingsRepository(context).getSettings().locationUpdateIntervalSeconds
+        )
+    }
+
+    @Test
+    fun save_ignoresOutOfRangeInterval() {
+        repository.save(repository.getSettings().copy(locationUpdateIntervalSeconds = -5))
+
+        assertEquals(
+            SettingsRepository.DEFAULT_LOCATION_INTERVAL_SECONDS,
+            SettingsRepository(context).getSettings().locationUpdateIntervalSeconds
+        )
+    }
+
+    @Test
     fun unknownStoredTheme_fallsBackToDark() {
         context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
             .edit()

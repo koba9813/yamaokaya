@@ -46,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,6 +74,11 @@ internal fun SettingsPage(
     val coroutineScope = rememberCoroutineScope()
     var settings by remember { mutableStateOf(appSettings) }
     var updateState by remember { mutableStateOf<UpdateFlowState>(UpdateFlowState.Hidden) }
+
+    // バックアップの読み込みなど、外から設定が変わったときに表示を追従させる。
+    LaunchedEffect(appSettings) {
+        settings = appSettings
+    }
 
     Scaffold(
         topBar = {
@@ -159,7 +165,7 @@ internal fun SettingsPage(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf(5, 10, 30, 60).forEach { sec ->
+                            SettingsRepository.LOCATION_UPDATE_INTERVAL_OPTIONS.forEach { sec ->
                                 FilterChip(
                                     selected = settings.locationUpdateIntervalSeconds == sec,
                                     onClick = {
@@ -207,6 +213,16 @@ internal fun SettingsPage(
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            BackupSection(
+                currentSettings = settings,
+                onSettingsImported = { imported ->
+                    settings = imported
+                    onSettingsChanged(imported)
+                }
+            )
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -335,7 +351,7 @@ internal fun SettingsPage(
 }
 
 @Composable
-private fun SectionTitle(title: String) {
+internal fun SectionTitle(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleMedium,
