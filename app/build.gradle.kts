@@ -12,8 +12,8 @@ android {
         applicationId = "win.haya.doko"
         minSdk = 24
         targetSdk = 35
-        versionCode = 4
-        versionName = "V.beta3.1"
+        versionCode = 5
+        versionName = "V.beta3.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
