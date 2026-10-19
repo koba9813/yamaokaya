@@ -165,19 +165,27 @@ private fun UpdateDialog(
                 .padding(horizontal = 20.dp, vertical = 24.dp),
             contentAlignment = Alignment.Center
         ) {
+            val dialogShape = RoundedCornerShape(28.dp)
+            val liquidGlassEnabled = LocalLiquidGlass.current.enabled
+
             Surface(
                 modifier = modifier
                     .fillMaxWidth()
-                    .widthIn(max = 420.dp),
-                shape = RoundedCornerShape(28.dp),
+                    .widthIn(max = 420.dp)
+                    .liquidGlassBorder(dialogShape),
+                shape = dialogShape,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 tonalElevation = 6.dp,
                 shadowElevation = 16.dp,
-                border = BorderStroke(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
-                )
+                border = if (liquidGlassEnabled) {
+                    null
+                } else {
+                    BorderStroke(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                    )
+                }
             ) {
                 Column(
                     modifier = Modifier
