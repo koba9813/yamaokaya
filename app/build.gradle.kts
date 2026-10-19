@@ -75,11 +75,18 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    testOptions {
+        // Robolectric（ユニットテスト）から Android のリソースとマージ済みマニフェストを参照できるようにする。
+        // Compose のスクリーンショット確認（UpdateFlowScreenshotTest）で必要。
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 dependencies {
     // Compose BOM — バージョンを一括管理
-    val composeBom = platform("androidx.compose:compose-bom:2024.05.00")
+    val composeBomVersion = "2024.05.00"
+    val composeBom = platform("androidx.compose:compose-bom:$composeBomVersion")
     implementation(composeBom)
 
     // Compose UI
@@ -131,5 +138,9 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
+    // ダイアログのスクリーンショット確認用（UpdateFlowScreenshotTest）
+    testImplementation(platform("androidx.compose:compose-bom:$composeBomVersion"))
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
 
