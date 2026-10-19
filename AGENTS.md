@@ -22,12 +22,14 @@
 
 ### 直近のコミット
 
-1. `e15d9f0` V.beta3.1 に更新（versionCode 4）
-2. `5e36e4c` データの引き継ぎ（バックアップ書き出し／読み込み）機能を追加
-3. `146b2db` 店舗データを更新（152店舗 → 198店舗）
-4. `dccc6a1` ダーク/ライト/山岡家のテーマ切り替え機能を追加
-5. `508bcf2` カメラとギャラリーのUIを刷新
-6. `ff6a909` Add in-app update flow and agent handoff notes（アプリ内アップデート機能）
+1. `93adc9b` アップデート確認ダイアログをモダンなデザインに刷新
+2. `ea08463` ドキュメント: AGENTS.md を V.beta3.1 リリース情報に更新
+3. `e15d9f0` V.beta3.1 に更新（versionCode 4）
+4. `5e36e4c` データの引き継ぎ（バックアップ書き出し／読み込み）機能を追加
+5. `146b2db` 店舗データを更新（152店舗 → 198店舗）
+6. `dccc6a1` ダーク/ライト/山岡家のテーマ切り替え機能を追加
+7. `508bcf2` カメラとギャラリーのUIを刷新
+8. `ff6a909` Add in-app update flow and agent handoff notes（アプリ内アップデート機能）
 
 ### 実装済み: テーマ切り替え
 
@@ -79,6 +81,9 @@ GitHub Releases から最新 APK を自動確認し、アプリ内でダウン�
 - 新しいバージョンがある場合、ダイアログでリリースノートを表示し、「ダウンロードしてインストール」で APK を取得・インストール
 - 必要に応じて「不明なアプリのインストール」権限設定画面を開く
 - APK ダウンロードに HTTP ステータスとサイズの検証を追加（途中で切れたダウンロードを検出）
+- ダイアログは AlertDialog ではなく、角丸サーフェス + グラデーションのアイコンバッジ + バージョン比較チップ + リリースノートカード（下端フェード付き）のカスタム UI
+  - ダウンロード中は円形プログレス + パーセント表示
+  - テーマ（ダーク / ライト / 山岡家）に追従
 
 関連ファイル:
 - `app/src/main/java/win/haya/doko/UpdateChecker.kt`
@@ -126,7 +131,9 @@ GitHub Releases から最新 APK を自動確認し、アプリ内でダウン�
 
 ### テスト
 
-- `app/src/test/java/win/haya/doko/` — Robolectric ベースのユニットテスト（`YamaokayaFinderTest` / `StampRepositoryTest` / `SettingsRepositoryTest` / `LocationUtilsTest`）
+- `app/src/test/java/win/haya/doko/` — Robolectric ベースのユニットテスト（`YamaokayaFinderTest` / `StampRepositoryTest` / `SettingsRepositoryTest` / `LocationUtilsTest` / `BackupManagerTest`）
+- `UpdateFlowScreenshotTest` — アップデート関連ダイアログを Robolectric + Compose で描画し、`app/build/screenshots/*.png` に出力する見た目確認用テスト（`@GraphicsMode(NATIVE)` + `unitTests.isIncludeAndroidResources = true` が必要）
+  - `captureToImage()` は Robolectric のダイアログ窓では再描画待ちでタイムアウトするため、`ShadowDialog.getLatestDialog()` の DecorView を直接ビットマップへ描画している
 
 ### Web
 
