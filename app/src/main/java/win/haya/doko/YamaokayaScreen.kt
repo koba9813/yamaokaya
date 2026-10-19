@@ -264,7 +264,7 @@ internal fun YamaokayaScreen(
                                 baseStyle = MaterialTheme.typography.headlineSmall,
                                 emphasizedStyle = MaterialTheme.typography.displayLarge,
                                 baseColor = MaterialTheme.colorScheme.onSurface,
-                                emphasizedColor = MaterialTheme.colorScheme.primary,
+                                emphasizedColor = liquidGlassTextAccent(),
                                 emphasize = emphasizeSuffix
                             )
                         }

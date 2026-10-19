@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ElevatedCard
@@ -41,6 +42,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -56,6 +58,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -114,6 +117,16 @@ internal fun SettingsPage(
                 selected = settings.themeMode,
                 onThemeSelected = { mode ->
                     settings = settings.copy(themeMode = mode)
+                    onSettingsChanged(settings)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            LiquidGlassSection(
+                enabled = settings.liquidGlassEnabled,
+                onEnabledChange = { enabled ->
+                    settings = settings.copy(liquidGlassEnabled = enabled)
                     onSettingsChanged(settings)
                 }
             )
@@ -352,13 +365,32 @@ internal fun SettingsPage(
 
 @Composable
 internal fun SectionTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.primary,
+    val liquidGlass = LocalLiquidGlass.current.enabled
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
-    )
+    ) {
+        if (liquidGlass) {
+            // ガラス背景では赤い見出しが沈むため、ブランド色のドット + 明るい文字にする
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = if (liquidGlass) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.primary
+            }
+        )
+    }
 }
 
 @Composable
@@ -493,6 +525,141 @@ private fun ThemeSection(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+/**
+ * Liquid Glass（ベータ）のオン / オフ。
+ * 実際の見た目に近いミニプレビュー付きで表示する。
+ */
+@Composable
+private fun LiquidGlassSection(
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit
+) {
+    SectionTitle(title = "Liquid Glass")
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge
+    ) {
+        Column {
+            ListItem(
+                headlineContent = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Liquid Glass")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        BetaBadge()
+                    }
+                },
+                supportingContent = {
+                    Text("すべての画面とウィジェットを、すりガラス調の半透明デザインにします")
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Filled.BlurOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                trailingContent = {
+                    Switch(
+                        checked = enabled,
+                        onCheckedChange = onEnabledChange
+                    )
+                }
+            )
+            HorizontalDivider()
+            LiquidGlassPreview(
+                enabled = enabled,
+                modifier = Modifier.padding(16.dp)
+            )
+            Text(
+                text = if (enabled) {
+                    "Liquid Glass が有効です。テーマの配色はそのままに、背景とパネルがガラス調になります。"
+                } else {
+                    "ベータ機能です。表示が崩れる場合はオフに戻してください。"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun BetaBadge() {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+    ) {
+        Text(
+            text = "BETA",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+        )
+    }
+}
+
+/** Liquid Glass のオン / オフで見た目がどう変わるかを示すミニプレビュー。 */
+@Composable
+private fun LiquidGlassPreview(
+    enabled: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(104.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFFD71920),
+                        Color(0xFF6B211B),
+                        Color(0xFFF5B82E)
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(0.86f)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.White.copy(alpha = if (enabled) 0.16f else 0.92f))
+                .border(
+                    width = 1.dp,
+                    color = Color.White.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Filled.LocationOn,
+                contentDescription = null,
+                tint = if (enabled) Color.White else Color(0xFFD71920),
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = "Yamaokaya is Doko?",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (enabled) Color.White else Color(0xFF1A1A1C)
+                )
+                Text(
+                    text = "1.24 km",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (enabled) Color(0xFFF5B82E) else Color(0xFFD71920)
+                )
+            }
         }
     }
 }

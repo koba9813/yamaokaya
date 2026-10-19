@@ -7,4 +7,9 @@
     <string name="widget_permission_needed">位置情報の許可が必要です</string>
     <string name="widget_route">ルート</string>
     <string name="widget_open_map">Googleマップでルートを表示</string>
+    <string name="widget_compact_name">コンパクト</string>
+    <string name="widget_minimal_name">ミニマル</string>
+    <string name="widget_standard_name">標準（サイズで変化）</string>
+    <string name="widget_compact_description">最寄りの山岡家を 1 行でコンパクトに表示</string>
+    <string name="widget_minimal_description">最寄りの山岡家までの距離を大きく表示</string>
 </resources>

@@ -6,16 +6,22 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.RemoteViews
+import androidx.core.content.ContextCompat
 
+/**
+ * 標準ウィジェット。配置されたサイズに応じて small / wide / tall の
+ * 3 種類のレイアウトを自動で切り替える。
+ */
 class YamaokayaWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         for (appWidgetId in appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, appWidgetId)
+            WidgetUpdater.updateAdaptive(context, appWidgetManager, appWidgetId)
         }
     }
 
@@ -25,7 +31,7 @@ class YamaokayaWidgetProvider : AppWidgetProvider() {
         appWidgetId: Int,
         newOptions: Bundle?
     ) {
-        updateAppWidget(context, appWidgetManager, appWidgetId)
+        WidgetUpdater.updateAdaptive(context, appWidgetManager, appWidgetId)
     }
 
     override fun onEnabled(context: Context) {
@@ -34,175 +40,292 @@ class YamaokayaWidgetProvider : AppWidgetProvider() {
     }
 
     companion object {
-        fun updateAllWidgets(context: Context) {
-            val appWidgetManager = AppWidgetManager.getInstance(context)
-            val componentName = ComponentName(context, YamaokayaWidgetProvider::class.java)
-            val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
-            performUpdate(context, appWidgetManager, appWidgetIds)
+        fun updateAllWidgets(context: Context) = WidgetUpdater.updateAll(context)
+    }
+}
+
+/** 4×1 の横長 1 行ウィジェット。店舗名と距離だけをコンパクトに表示する。 */
+class YamaokayaCompactWidgetProvider : AppWidgetProvider() {
+
+    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        for (appWidgetId in appWidgetIds) {
+            WidgetUpdater.updateFixed(context, appWidgetManager, appWidgetId, R.layout.widget_yamaokaya_compact)
         }
+    }
 
-        private fun performUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-            for (appWidgetId in appWidgetIds) {
-                updateAppWidget(context, appWidgetManager, appWidgetId)
-            }
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle?
+    ) {
+        WidgetUpdater.updateFixed(context, appWidgetManager, appWidgetId, R.layout.widget_yamaokaya_compact)
+    }
+
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        WidgetUpdater.updateAll(context)
+    }
+}
+
+/** 2×2 のミニマルウィジェット。距離を大きく表示する。 */
+class YamaokayaMinimalWidgetProvider : AppWidgetProvider() {
+
+    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        for (appWidgetId in appWidgetIds) {
+            WidgetUpdater.updateFixed(context, appWidgetManager, appWidgetId, R.layout.widget_yamaokaya_minimal)
         }
+    }
 
-        fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
-            val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
-            val layoutId = selectLayout(context, options)
-            val views = RemoteViews(context.packageName, layoutId)
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle?
+    ) {
+        WidgetUpdater.updateFixed(context, appWidgetManager, appWidgetId, R.layout.widget_yamaokaya_minimal)
+    }
 
-            bindData(context, views, layoutId)
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        WidgetUpdater.updateAll(context)
+    }
+}
 
-            val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-            if (launchIntent != null) {
-                val pendingIntent = PendingIntent.getActivity(
-                    context,
-                    0,
-                    launchIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
-            }
+/** 3 種類のウィジェットで共通の更新処理。 */
+internal object WidgetUpdater {
 
-            appWidgetManager.updateAppWidget(appWidgetId, views)
+    /** すべてのウィジェット（全種類）を更新する。設定変更時にも呼ぶ。 */
+    fun updateAll(context: Context) {
+        val appWidgetManager = AppWidgetManager.getInstance(context)
+        updateProvider(context, appWidgetManager, YamaokayaWidgetProvider::class.java) { appWidgetId ->
+            selectLayout(context, appWidgetManager.getAppWidgetOptions(appWidgetId))
         }
-
-        private fun selectLayout(context: Context, options: Bundle?): Int {
-            val density = context.resources.displayMetrics.density
-            val minWidthRaw = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) ?: 0
-            val maxWidthRaw = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH) ?: 0
-            val minHeightRaw = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) ?: 0
-            val maxHeightRaw = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT) ?: 0
-
-            val minWidthDp = (minWidthRaw / density).toInt()
-            val maxWidthDp = (maxWidthRaw / density).toInt()
-            val minHeightDp = (minHeightRaw / density).toInt()
-            val maxHeightDp = (maxHeightRaw / density).toInt()
-
-            android.util.Log.d(
-                "YamaokayaWidget",
-                "sizes raw/minW=$minWidthRaw maxW=$maxWidthRaw minH=$minHeightRaw maxH=$maxHeightRaw " +
-                    "dp/minW=$minWidthDp maxW=$maxWidthDp minH=$minHeightDp maxH=$maxHeightDp"
-            )
-
-            val isTall = (minHeightRaw >= 180 || maxHeightRaw >= 220 ||
-                minHeightDp >= 120 || maxHeightDp >= 140) &&
-                (minWidthRaw >= 150 || maxWidthRaw >= 170 ||
-                    minWidthDp >= 100 || maxWidthDp >= 110)
-
-            val isWide = minWidthRaw >= 250 || maxWidthRaw >= 300 ||
-                minWidthDp >= 170 || maxWidthDp >= 200
-
-            return when {
-                isTall -> R.layout.widget_yamaokaya_tall
-                isWide -> R.layout.widget_yamaokaya_wide
-                else -> R.layout.widget_yamaokaya
-            }
+        updateProvider(context, appWidgetManager, YamaokayaCompactWidgetProvider::class.java) {
+            R.layout.widget_yamaokaya_compact
         }
-
-        private fun bindData(context: Context, views: RemoteViews, layoutId: Int) {
-            if (!hasLocationPermission(context)) {
-                setDefaultMessage(views, layoutId, context.getString(R.string.widget_permission_needed))
-                return
-            }
-
-            val location = getLastKnownLocation(context)
-            if (location == null) {
-                setDefaultMessage(views, layoutId, context.getString(R.string.widget_locating))
-                return
-            }
-
-            val current = Coordinates(location.latitude, location.longitude)
-            val nearestShops = YamaokayaFinder.getRegisteredShops()
-                .map {
-                    ShopInfo(
-                        name = it.name,
-                        coordinates = it.coordinates,
-                        distanceMeters = calculateDistanceMeters(current, it.coordinates),
-                        bearingDegrees = 0.0
-                    )
-                }
-                .sortedBy { it.distanceMeters }
-
-            if (nearestShops.isEmpty()) {
-                setDefaultMessage(views, layoutId, context.getString(R.string.widget_no_shop))
-                return
-            }
-
-            val nearest = nearestShops.first()
-            views.setTextViewText(R.id.widget_shop_name, nearest.name)
-            views.setTextViewText(R.id.widget_distance, formatWidgetDistance(nearest.distanceMeters))
-
-            if (layoutId == R.layout.widget_yamaokaya_wide) {
-                bindMapButton(context, views, nearest)
-            }
-
-            if (layoutId == R.layout.widget_yamaokaya_tall) {
-                bindMultipleShops(views, nearestShops)
-            }
+        updateProvider(context, appWidgetManager, YamaokayaMinimalWidgetProvider::class.java) {
+            R.layout.widget_yamaokaya_minimal
         }
+    }
 
-        private fun setDefaultMessage(views: RemoteViews, layoutId: Int, message: String) {
-            if (layoutId == R.layout.widget_yamaokaya_tall) {
-                views.setTextViewText(R.id.widget_title, message)
-            } else {
-                views.setTextViewText(R.id.widget_shop_name, message)
-                views.setTextViewText(R.id.widget_distance, "--")
-            }
-            if (layoutId == R.layout.widget_yamaokaya_tall) {
-                bindMultipleShops(views, emptyList())
-            }
+    fun updateAdaptive(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
+        update(context, appWidgetManager, appWidgetId, selectLayout(context, appWidgetManager.getAppWidgetOptions(appWidgetId)))
+    }
+
+    fun updateFixed(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, layoutId: Int) {
+        update(context, appWidgetManager, appWidgetId, layoutId)
+    }
+
+    private fun updateProvider(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        providerClass: Class<*>,
+        layoutFor: (Int) -> Int
+    ) {
+        val appWidgetIds = appWidgetManager.getAppWidgetIds(ComponentName(context, providerClass))
+        for (appWidgetId in appWidgetIds) {
+            update(context, appWidgetManager, appWidgetId, layoutFor(appWidgetId))
         }
+    }
 
-        private fun bindMapButton(context: Context, views: RemoteViews, shop: ShopInfo) {
-            val mapUri = Uri.parse(
-                "https://www.google.com/maps/dir/?api=1&destination=${shop.coordinates.lat},${shop.coordinates.lon}"
-            )
-            val mapIntent = Intent(Intent.ACTION_VIEW, mapUri)
-            val mapPendingIntent = PendingIntent.getActivity(
+    private fun update(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        layoutId: Int
+    ) {
+        val liquidGlass = SettingsRepository(context).getSettings().liquidGlassEnabled
+
+        val views = RemoteViews(context.packageName, layoutId)
+        applyStyle(context, views, layoutId, liquidGlass)
+        bindData(context, views, layoutId)
+
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        if (launchIntent != null) {
+            val pendingIntent = PendingIntent.getActivity(
                 context,
-                1,
-                mapIntent,
+                0,
+                launchIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            views.setOnClickPendingIntent(R.id.widget_map_button, mapPendingIntent)
+            views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
         }
 
-        private fun bindMultipleShops(views: RemoteViews, shops: List<ShopInfo>) {
-            val rowIds = listOf(
-                R.id.widget_shop_row_1,
-                R.id.widget_shop_row_2,
-                R.id.widget_shop_row_3
-            )
-            val nameIds = listOf(
-                R.id.widget_shop_name_1,
-                R.id.widget_shop_name_2,
-                R.id.widget_shop_name_3
-            )
-            val distanceIds = listOf(
-                R.id.widget_distance_1,
-                R.id.widget_distance_2,
-                R.id.widget_distance_3
-            )
+        appWidgetManager.updateAppWidget(appWidgetId, views)
+    }
 
-            for (i in rowIds.indices) {
-                if (i < shops.size) {
-                    views.setViewVisibility(rowIds[i], View.VISIBLE)
-                    views.setTextViewText(nameIds[i], shops[i].name)
-                    views.setTextViewText(distanceIds[i], formatWidgetDistance(shops[i].distanceMeters))
-                } else {
-                    views.setViewVisibility(rowIds[i], View.GONE)
-                }
+    /** Liquid Glass 有効時は、すりガラス風の背景と白系の文字色に差し替える。 */
+    internal fun applyStyle(context: Context, views: RemoteViews, layoutId: Int, liquidGlass: Boolean) {
+        if (!liquidGlass) return
+
+        views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.widget_background_glass)
+
+        val primary = ContextCompat.getColor(context, R.color.widget_glass_text_primary)
+        val secondary = ContextCompat.getColor(context, R.color.widget_glass_text_secondary)
+        val accent = ContextCompat.getColor(context, R.color.widget_glass_accent)
+
+        // レイアウトに存在しない ID は無視されるため、まとめて指定して問題ない
+        listOf(
+            R.id.widget_title,
+            R.id.widget_shop_name,
+            R.id.widget_shop_name_1,
+            R.id.widget_shop_name_2,
+            R.id.widget_shop_name_3
+        ).forEach { views.setTextColor(it, primary) }
+        listOf(
+            R.id.widget_distance,
+            R.id.widget_distance_1,
+            R.id.widget_distance_2,
+            R.id.widget_distance_3
+        ).forEach { views.setTextColor(it, accent) }
+
+        // タイトル（"Yamaokaya is Doko?"）は少し控えめに
+        views.setTextColor(R.id.widget_title, secondary)
+
+        // 「ルート」ボタン（wide レイアウトのみ）は金背景 + 濃い文字にする
+        if (layoutId == R.layout.widget_yamaokaya_wide) {
+            views.setColorStateList(
+                R.id.widget_map_button,
+                "setBackgroundTintList",
+                ColorStateList.valueOf(accent)
+            )
+            views.setTextColor(R.id.widget_map_button, ContextCompat.getColor(context, R.color.widget_glass_button_text))
+        }
+    }
+
+    private fun selectLayout(context: Context, options: Bundle?): Int {
+        val density = context.resources.displayMetrics.density
+        val minWidthRaw = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) ?: 0
+        val maxWidthRaw = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH) ?: 0
+        val minHeightRaw = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) ?: 0
+        val maxHeightRaw = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT) ?: 0
+
+        val minWidthDp = (minWidthRaw / density).toInt()
+        val maxWidthDp = (maxWidthRaw / density).toInt()
+        val minHeightDp = (minHeightRaw / density).toInt()
+        val maxHeightDp = (maxHeightRaw / density).toInt()
+
+        android.util.Log.d(
+            "YamaokayaWidget",
+            "sizes raw/minW=$minWidthRaw maxW=$maxWidthRaw minH=$minHeightRaw maxH=$maxHeightRaw " +
+                "dp/minW=$minWidthDp maxW=$maxWidthDp minH=$minHeightDp maxH=$maxHeightDp"
+        )
+
+        val isTall = (minHeightRaw >= 180 || maxHeightRaw >= 220 ||
+            minHeightDp >= 120 || maxHeightDp >= 140) &&
+            (minWidthRaw >= 150 || maxWidthRaw >= 170 ||
+                minWidthDp >= 100 || maxWidthDp >= 110)
+
+        val isWide = minWidthRaw >= 250 || maxWidthRaw >= 300 ||
+            minWidthDp >= 170 || maxWidthDp >= 200
+
+        return when {
+            isTall -> R.layout.widget_yamaokaya_tall
+            isWide -> R.layout.widget_yamaokaya_wide
+            else -> R.layout.widget_yamaokaya
+        }
+    }
+
+    private fun bindData(context: Context, views: RemoteViews, layoutId: Int) {
+        if (!hasLocationPermission(context)) {
+            setDefaultMessage(views, layoutId, context.getString(R.string.widget_permission_needed))
+            return
+        }
+
+        val location = getLastKnownLocation(context)
+        if (location == null) {
+            setDefaultMessage(views, layoutId, context.getString(R.string.widget_locating))
+            return
+        }
+
+        val current = Coordinates(location.latitude, location.longitude)
+        val nearestShops = YamaokayaFinder.getRegisteredShops()
+            .map {
+                ShopInfo(
+                    name = it.name,
+                    coordinates = it.coordinates,
+                    distanceMeters = calculateDistanceMeters(current, it.coordinates),
+                    bearingDegrees = 0.0
+                )
             }
+            .sortedBy { it.distanceMeters }
+
+        if (nearestShops.isEmpty()) {
+            setDefaultMessage(views, layoutId, context.getString(R.string.widget_no_shop))
+            return
         }
 
-        private fun formatWidgetDistance(meters: Float): String {
-            return if (meters < 1000f) {
-                "${"%.0f".format(meters)} m"
+        val nearest = nearestShops.first()
+        views.setTextViewText(R.id.widget_shop_name, nearest.name)
+        views.setTextViewText(R.id.widget_distance, formatWidgetDistance(nearest.distanceMeters))
+
+        if (layoutId == R.layout.widget_yamaokaya_wide) {
+            bindMapButton(context, views, nearest)
+        }
+
+        if (layoutId == R.layout.widget_yamaokaya_tall) {
+            bindMultipleShops(views, nearestShops)
+        }
+    }
+
+    private fun setDefaultMessage(views: RemoteViews, layoutId: Int, message: String) {
+        if (layoutId == R.layout.widget_yamaokaya_tall) {
+            views.setTextViewText(R.id.widget_title, message)
+            bindMultipleShops(views, emptyList())
+        } else {
+            views.setTextViewText(R.id.widget_shop_name, message)
+            views.setTextViewText(R.id.widget_distance, "--")
+        }
+    }
+
+    private fun bindMapButton(context: Context, views: RemoteViews, shop: ShopInfo) {
+        val mapUri = Uri.parse(
+            "https://www.google.com/maps/dir/?api=1&destination=${shop.coordinates.lat},${shop.coordinates.lon}"
+        )
+        val mapIntent = Intent(Intent.ACTION_VIEW, mapUri)
+        val mapPendingIntent = PendingIntent.getActivity(
+            context,
+            1,
+            mapIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.widget_map_button, mapPendingIntent)
+    }
+
+    private fun bindMultipleShops(views: RemoteViews, shops: List<ShopInfo>) {
+        val rowIds = listOf(
+            R.id.widget_shop_row_1,
+            R.id.widget_shop_row_2,
+            R.id.widget_shop_row_3
+        )
+        val nameIds = listOf(
+            R.id.widget_shop_name_1,
+            R.id.widget_shop_name_2,
+            R.id.widget_shop_name_3
+        )
+        val distanceIds = listOf(
+            R.id.widget_distance_1,
+            R.id.widget_distance_2,
+            R.id.widget_distance_3
+        )
+
+        for (i in rowIds.indices) {
+            if (i < shops.size) {
+                views.setViewVisibility(rowIds[i], View.VISIBLE)
+                views.setTextViewText(nameIds[i], shops[i].name)
+                views.setTextViewText(distanceIds[i], formatWidgetDistance(shops[i].distanceMeters))
             } else {
-                "${"%.2f".format(meters / 1000f)} km"
+                views.setViewVisibility(rowIds[i], View.GONE)
             }
+        }
+    }
+
+    private fun formatWidgetDistance(meters: Float): String {
+        return if (meters < 1000f) {
+            "${"%.0f".format(meters)} m"
+        } else {
+            "${"%.2f".format(meters / 1000f)} km"
         }
     }
 }

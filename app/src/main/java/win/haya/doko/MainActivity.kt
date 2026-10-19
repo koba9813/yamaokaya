@@ -18,7 +18,10 @@ class MainActivity : ComponentActivity() {
             val viewModel: YamaokayaViewModel = viewModel()
             val appSettings by viewModel.appSettings
 
-            YamaokayaTheme(themeMode = appSettings.themeMode) {
+            YamaokayaTheme(
+                themeMode = appSettings.themeMode,
+                liquidGlassEnabled = appSettings.liquidGlassEnabled
+            ) {
                 YamaokayaScreen(
                     viewModel = viewModel
                 )

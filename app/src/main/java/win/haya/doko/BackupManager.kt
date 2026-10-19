@@ -475,6 +475,7 @@ internal object BackupManager {
         .put("proximityNotification", settings.proximityNotificationEnabled)
         .put("trackerNotification", settings.trackerNotificationEnabled)
         .put("locationUpdateInterval", settings.locationUpdateIntervalSeconds)
+        .put("liquidGlass", settings.liquidGlassEnabled)
 
     private fun parseSettings(text: String): AppSettings {
         val json = JSONObject(text)
@@ -488,7 +489,9 @@ internal object BackupManager {
                     SettingsRepository.DEFAULT_LOCATION_INTERVAL_SECONDS
                 )
             ),
-            themeMode = ThemeMode.fromStorageKey(json.optString("theme").ifEmpty { null })
+            themeMode = ThemeMode.fromStorageKey(json.optString("theme").ifEmpty { null }),
+            // 古いバックアップには存在しないため、その場合はオフ（既定）として扱う
+            liquidGlassEnabled = json.optBoolean("liquidGlass", false)
         )
     }
 

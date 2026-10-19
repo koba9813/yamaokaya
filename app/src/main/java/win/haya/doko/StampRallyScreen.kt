@@ -378,7 +378,7 @@ private fun ProgressCard(
                 Text(
                     text = "$visitedCount",
                     style = MaterialTheme.typography.displayLarge,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = liquidGlassTextAccent(),
                     fontWeight = FontWeight.ExtraBold
                 )
                 Text(
@@ -520,7 +520,7 @@ private fun FilterSection(
             text = "表示",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = liquidGlassTextAccent()
         )
         Row(
             modifier = Modifier
@@ -541,7 +541,7 @@ private fun FilterSection(
             text = "都道府県",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = liquidGlassTextAccent()
         )
         Row(
             modifier = Modifier
@@ -646,13 +646,13 @@ private fun ShopRowCard(
                             imageVector = Icons.Filled.CheckCircle,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = liquidGlassTextAccent()
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "${count}回チェックイン",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            color = liquidGlassTextAccent()
                         )
                     }
                 }

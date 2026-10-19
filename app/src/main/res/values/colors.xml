@@ -5,4 +5,9 @@
     <color name="widget_text_primary">#FF1C1B1B</color>
     <color name="widget_text_secondary">#FF797675</color>
     <color name="widget_accent">#FFB3261E</color>
+    <!-- Liquid Glass ウィジェット用（ダークガラス背景に合わせた配色） -->
+    <color name="widget_glass_text_primary">#FFFFFFFF</color>
+    <color name="widget_glass_text_secondary">#CCFFFFFF</color>
+    <color name="widget_glass_accent">#FFF5B82E</color>
+    <color name="widget_glass_button_text">#FF3A2A00</color>
 </resources>

@@ -6,7 +6,9 @@ data class AppSettings(
     val proximityNotificationEnabled: Boolean = true,
     val trackerNotificationEnabled: Boolean = true,
     val locationUpdateIntervalSeconds: Int = 10,
-    val themeMode: ThemeMode = ThemeMode.DARK
+    val themeMode: ThemeMode = ThemeMode.DARK,
+    /** Liquid Glass（ベータ）。画面とウィジェットをすりガラス調にする。既定はオフ。 */
+    val liquidGlassEnabled: Boolean = false
 )
 
 class SettingsRepository(context: Context) {
@@ -20,7 +22,8 @@ class SettingsRepository(context: Context) {
             locationUpdateIntervalSeconds = normalizeLocationUpdateInterval(
                 prefs.getInt("location_update_interval", DEFAULT_LOCATION_INTERVAL_SECONDS)
             ),
-            themeMode = ThemeMode.fromStorageKey(prefs.getString("theme_mode", null))
+            themeMode = ThemeMode.fromStorageKey(prefs.getString("theme_mode", null)),
+            liquidGlassEnabled = prefs.getBoolean("liquid_glass", false)
         )
     }
 
@@ -33,6 +36,7 @@ class SettingsRepository(context: Context) {
                 normalizeLocationUpdateInterval(settings.locationUpdateIntervalSeconds)
             )
             .putString("theme_mode", settings.themeMode.storageKey)
+            .putBoolean("liquid_glass", settings.liquidGlassEnabled)
             .apply()
     }
 

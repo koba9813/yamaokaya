@@ -71,13 +71,38 @@
 
         <receiver
             android:name=".YamaokayaWidgetProvider"
-            android:exported="true">
+            android:exported="true"
+            android:label="@string/widget_standard_name">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/yamaokaya_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".YamaokayaCompactWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_compact_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/yamaokaya_widget_compact_info" />
+        </receiver>
+
+        <receiver
+            android:name=".YamaokayaMinimalWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_minimal_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/yamaokaya_widget_minimal_info" />
         </receiver>
     </application>
 
