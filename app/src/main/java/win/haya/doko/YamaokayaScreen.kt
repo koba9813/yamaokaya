@@ -2,24 +2,16 @@ package win.haya.doko
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import java.io.File
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -31,48 +23,36 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material.icons.filled.AddAPhoto
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.outlined.AddAPhoto
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -85,19 +65,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 private const val IMAGE_TOP_OFFSET_DEGREES = 0f
 
@@ -107,7 +83,6 @@ private fun formatDistance(meters: Float): String = if (meters < 1000f) {
     "${"%.2f".format(meters / 1000f)} km"
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun YamaokayaScreen(
     viewModel: YamaokayaViewModel
@@ -132,7 +107,6 @@ internal fun YamaokayaScreen(
     var cameraShop by remember { mutableStateOf<String?>(null) }
     var checkInFeedbackMessage by remember { mutableStateOf<String?>(null) }
     var splashFinished by rememberSaveable { mutableStateOf(false) }
-    var titleMoved by rememberSaveable { mutableStateOf(false) }
     var updateState by remember { mutableStateOf<UpdateFlowState>(UpdateFlowState.Hidden) }
 
     val imageNames = remember {
@@ -142,7 +116,11 @@ internal fun YamaokayaScreen(
         imageNames.map { resolveDrawableId(context, it) }.filter { it != 0 }
     }
     val currentDrawableId = remember(imageDrawableIds, selectedImageIndex) {
-        if (imageDrawableIds.isNotEmpty()) imageDrawableIds[selectedImageIndex % imageDrawableIds.size] else 0
+        if (imageDrawableIds.isNotEmpty()) {
+            imageDrawableIds[selectedImageIndex % imageDrawableIds.size]
+        } else {
+            0
+        }
     }
 
     val isWithinRadius = nearestShop?.distanceMeters?.let { it <= KOKO_RADIUS_METERS } == true
@@ -234,108 +212,34 @@ internal fun YamaokayaScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            topBar = {
-            AnimatedVisibility(
-                visible = splashFinished,
-                enter = fadeIn(animationSpec = tween(400))
-            ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .padding(vertical = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 64.dp, end = 64.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            TitleText(
-                                prefix = "Yamaokaya is",
-                                suffix = suffixText,
-                                baseStyle = MaterialTheme.typography.headlineSmall,
-                                emphasizedStyle = MaterialTheme.typography.displayLarge,
-                                baseColor = MaterialTheme.colorScheme.onSurface,
-                                emphasizedColor = liquidGlassTextAccent(),
-                                emphasize = emphasizeSuffix
-                            )
-                        }
-
-                        Column(
-                            modifier = Modifier.align(Alignment.CenterEnd),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            IconButton(onClick = { showStampRally = true }) {
-                                Icon(
-                                    imageVector = Icons.Filled.Star,
-                                    contentDescription = "スタンプラリー"
-                                )
-                            }
-                            IconButton(onClick = { showGallery = true }) {
-                                Icon(
-                                    imageVector = Icons.Filled.PhotoLibrary,
-                                    contentDescription = "ギャラリー"
-                                )
-                            }
-                            IconButton(onClick = { showInfoPage = true }) {
-                                Icon(
-                                    imageVector = Icons.Filled.Info,
-                                    contentDescription = "情報"
-                                )
-                            }
-                            IconButton(onClick = { showSettings = true }) {
-                                Icon(
-                                    imageVector = Icons.Filled.Settings,
-                                    contentDescription = "設定"
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        floatingActionButton = { }
-    ) { innerPadding ->
-        Box(
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(screenContainerColor())
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(innerPadding)
+                .alpha(if (splashFinished) 1f else 0f)
         ) {
-            when {
-                !hasLocationPermission(context) -> {
-                    PermissionRequestContent(
-                        onRequestPermission = {
-                            permissionLauncher.launch(
-                                buildList {
-                                    add(Manifest.permission.ACCESS_FINE_LOCATION)
-                                    add(Manifest.permission.ACCESS_COARSE_LOCATION)
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                        add(Manifest.permission.POST_NOTIFICATIONS)
-                                    }
-                                }.toTypedArray()
-                            )
-                        }
-                    )
-                }
+            MainHeader(
+                suffixText = suffixText,
+                emphasizeSuffix = emphasizeSuffix,
+                onOpenStampRally = { showStampRally = true },
+                onOpenGallery = { showGallery = true },
+                onOpenInfo = { showInfoPage = true },
+                onOpenSettings = { showSettings = true }
+            )
 
-                isLoading && nearestShop == null -> {
-                    LoadingContent()
-                }
-
-                errorMessage != null -> {
-                    ErrorContent(
-                        message = errorMessage ?: "検索に失敗しました。",
-                        onRetry = {
-                            if (!hasLocationPermission(context)) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                when {
+                    !hasLocationPermission(context) -> {
+                        PermissionRequestContent(
+                            onRequestPermission = {
                                 permissionLauncher.launch(
                                     buildList {
                                         add(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -345,104 +249,94 @@ internal fun YamaokayaScreen(
                                         }
                                     }.toTypedArray()
                                 )
-                            } else {
-                                viewModel.retryLocation()
                             }
-                        }
-                    )
-                }
+                        )
+                    }
 
-                isWithinRadius -> {
-                    val shop = nearestShop ?: return@Scaffold
-                    AtShopContent(
-                        shop = shop,
-                        stampRepository = stampRepository,
-                        photoRepository = photoRepository,
-                        checkInFeedbackMessage = checkInFeedbackMessage,
-                        onCheckInFeedbackMessage = { checkInFeedbackMessage = it },
-                        onOpenMap = { openGoogleMaps(context, shop.coordinates) },
-                        onOpenCamera = { name -> cameraShop = name }
-                    )
-                }
+                    isLoading && nearestShop == null -> {
+                        LoadingContent()
+                    }
 
-                nearestShop != null -> {
-                    val shop = nearestShop ?: return@Scaffold
-                    val arrowRotation = normalizeDegrees(
-                        shop.bearingDegrees.toFloat() - headingDegrees + IMAGE_TOP_OFFSET_DEGREES
-                    )
-
-                    ShopContent(
-                        shop = shop,
-                        currentDrawableId = currentDrawableId,
-                        arrowRotation = arrowRotation,
-                        isWithinRadius = isWithinRadius,
-                        checkInFeedbackMessage = checkInFeedbackMessage,
-                        onImageClick = {
-                            if (imageDrawableIds.size > 1) {
-                                selectedImageIndex = (selectedImageIndex + 1) % imageDrawableIds.size
+                    errorMessage != null -> {
+                        ErrorContent(
+                            message = errorMessage ?: "検索に失敗しました。",
+                            onRetry = {
+                                if (!hasLocationPermission(context)) {
+                                    permissionLauncher.launch(
+                                        buildList {
+                                            add(Manifest.permission.ACCESS_FINE_LOCATION)
+                                            add(Manifest.permission.ACCESS_COARSE_LOCATION)
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                                add(Manifest.permission.POST_NOTIFICATIONS)
+                                            }
+                                        }.toTypedArray()
+                                    )
+                                } else {
+                                    viewModel.retryLocation()
+                                }
                             }
-                        },
-                        onOpenMap = {
-                            openGoogleMaps(context, shop.coordinates)
-                        },
-                        onOpenMenu = { openMenuInAppBrowser(context) }
-                    )
+                        )
+                    }
+
+                    isWithinRadius -> {
+                        val shop = nearestShop ?: return@Box
+                        AtShopContent(
+                            shop = shop,
+                            stampRepository = stampRepository,
+                            photoRepository = photoRepository,
+                            checkInFeedbackMessage = checkInFeedbackMessage,
+                            onCheckInFeedbackMessage = { checkInFeedbackMessage = it },
+                            onOpenMap = { openGoogleMaps(context, shop.coordinates) },
+                            onOpenCamera = { name -> cameraShop = name }
+                        )
+                    }
+
+                    nearestShop != null -> {
+                        val shop = nearestShop ?: return@Box
+                        val arrowRotation = normalizeDegrees(
+                            shop.bearingDegrees.toFloat() - headingDegrees + IMAGE_TOP_OFFSET_DEGREES
+                        )
+
+                        ShopContent(
+                            shop = shop,
+                            currentDrawableId = currentDrawableId,
+                            arrowRotation = arrowRotation,
+                            checkInFeedbackMessage = checkInFeedbackMessage,
+                            onImageClick = {
+                                if (imageDrawableIds.size > 1) {
+                                    selectedImageIndex = (selectedImageIndex + 1) % imageDrawableIds.size
+                                }
+                            },
+                            onOpenMap = {
+                                openGoogleMaps(context, shop.coordinates)
+                            },
+                            onOpenMenu = { openMenuInAppBrowser(context) }
+                        )
+                    }
                 }
             }
         }
-    }
 
         AnimatedVisibility(
             visible = !splashFinished,
-            enter = fadeIn(animationSpec = tween(500)),
-            exit = fadeOut(animationSpec = tween(1200))
+            enter = fadeIn(animationSpec = tween(320)),
+            exit = fadeOut(animationSpec = tween(700))
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black)
-            )
-        }
-
-        AnimatedVisibility(
-            visible = !titleMoved,
-            enter = fadeIn(animationSpec = tween(500)),
-            exit = fadeOut(animationSpec = tween(100))
-        ) {
-            BoxWithConstraints(
-                modifier = Modifier.fillMaxSize(),
+                    .background(Color.Black),
                 contentAlignment = Alignment.Center
             ) {
-                val density = LocalDensity.current
-                val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-                val targetOffsetY = with(density) {
-                    -(maxHeight.toPx() / 2f) + (statusBarHeight.toPx() + 44.dp.toPx())
-                }
-                val offsetY = remember { Animatable(0f) }
-                val textAlpha = remember { Animatable(1f) }
-
-                LaunchedEffect(splashFinished) {
-                    if (splashFinished && !titleMoved) {
-                        launch {
-                            offsetY.animateTo(targetOffsetY, tween(900))
-                        }
-                        textAlpha.animateTo(0f, tween(500))
-                        titleMoved = true
-                    }
-                }
-
                 TitleText(
                     prefix = "Yamaokaya is",
                     suffix = suffixText,
-                    baseStyle = MaterialTheme.typography.displayMedium,
+                    baseStyle = MaterialTheme.typography.titleLarge,
                     emphasizedStyle = MaterialTheme.typography.displayLarge,
-                    baseColor = Color.White,
+                    baseColor = Color.White.copy(alpha = 0.72f),
                     emphasizedColor = Color.White,
                     emphasize = emphasizeSuffix,
-                    modifier = Modifier
-                        .offset { IntOffset(0, offsetY.value.toInt()) }
-                        .alpha(textAlpha.value)
-                        .padding(horizontal = 24.dp)
+                    modifier = Modifier.padding(horizontal = 24.dp)
                 )
             }
         }
@@ -459,12 +353,124 @@ internal fun YamaokayaScreen(
     }
 }
 
+/* -------------------------------------------------------------------------
+ * Header
+ * ---------------------------------------------------------------------- */
+
+@Composable
+private fun MainHeader(
+    suffixText: String,
+    emphasizeSuffix: Boolean,
+    onOpenStampRally: () -> Unit,
+    onOpenGallery: () -> Unit,
+    onOpenInfo: () -> Unit,
+    onOpenSettings: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(start = AppSpacing.screen, end = 16.dp, top = 6.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(top = 6.dp, end = 10.dp)
+        ) {
+            Text(
+                text = "Yamaokaya is",
+                style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 0.5.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            AnimatedContent(
+                targetState = suffixText,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(220)) +
+                        slideInVertically(animationSpec = tween(220)) { it / 7 }) togetherWith
+                        fadeOut(animationSpec = tween(140))
+                },
+                label = "headerDistance"
+            ) { suffix ->
+                Text(
+                    text = suffix,
+                    style = MaterialTheme.typography.displayMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (emphasizeSuffix) {
+                        liquidGlassTextAccent()
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    maxLines = 1
+                )
+            }
+        }
+
+        MainActionRail(
+            onOpenStampRally = onOpenStampRally,
+            onOpenGallery = onOpenGallery,
+            onOpenInfo = onOpenInfo,
+            onOpenSettings = onOpenSettings
+        )
+    }
+}
+
+@Composable
+private fun MainActionRail(
+    onOpenStampRally: () -> Unit,
+    onOpenGallery: () -> Unit,
+    onOpenInfo: () -> Unit,
+    onOpenSettings: () -> Unit
+) {
+    GlassSurface(
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp),
+        level = GlassLevel.Thin,
+        shadowElevation = 6.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(3.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row {
+                RailIconButton(Icons.Outlined.Star, "スタンプラリー", onOpenStampRally)
+                RailIconButton(Icons.Outlined.PhotoLibrary, "ギャラリー", onOpenGallery)
+            }
+            Row {
+                RailIconButton(Icons.Outlined.Info, "情報", onOpenInfo)
+                RailIconButton(Icons.Outlined.Settings, "設定", onOpenSettings)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RailIconButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.size(44.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(21.dp)
+        )
+    }
+}
+
+/* -------------------------------------------------------------------------
+ * Main content
+ * ---------------------------------------------------------------------- */
+
 @Composable
 private fun ShopContent(
     shop: ShopInfo,
     currentDrawableId: Int,
     arrowRotation: Float,
-    isWithinRadius: Boolean,
     checkInFeedbackMessage: String?,
     onImageClick: () -> Unit,
     onOpenMap: () -> Unit,
@@ -473,225 +479,95 @@ private fun ShopContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
+            .navigationBarsPadding()
+            .padding(start = AppSpacing.screen, end = AppSpacing.screen, bottom = 18.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
-            if (isWithinRadius) {
-                SpecialRangeCard(shop = shop)
-            } else if (currentDrawableId != 0) {
+            val side = minOf(
+                maxWidth - 20.dp,
+                maxHeight - 12.dp,
+                400.dp
+            ).coerceAtLeast(120.dp)
+
+            if (currentDrawableId != 0) {
                 Image(
                     painter = painterResource(id = currentDrawableId),
-                    contentDescription = "山岡家の方向",
+                    contentDescription = "山岡家の方向。タップすると画像が切り替わります",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
-                        .size(420.dp)
+                        .size(side)
                         .graphicsLayer {
                             rotationZ = arrowRotation
                         }
                         .clickable(onClick = onImageClick)
                 )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(side)
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.LocationOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        modifier = Modifier.size(56.dp)
+                    )
+                }
             }
         }
 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 96.dp),
+                .widthIn(max = 480.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "最寄店舗 is ${shop.name}",
+                text = "最寄店舗",
+                style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.4.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = shop.name,
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                maxLines = 2
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                FilledTonalButton(
+                GlassPillButton(
+                    text = "Google マップ",
                     onClick = onOpenMap,
+                    icon = Icons.Outlined.LocationOn,
+                    accent = true,
                     modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.LocationOn,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.padding(start = 8.dp))
-                    Text("Google マップ")
-                }
-
-                if (!isWithinRadius) {
-                    FilledTonalButton(
-                        onClick = onOpenMenu,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.ExitToApp,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.padding(start = 8.dp))
-                        Text("メニュー")
-                    }
-                }
-            }
-
-            AnimatedVisibility(
-                visible = checkInFeedbackMessage != null,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                checkInFeedbackMessage?.let { message ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        ),
-                        shape = MaterialTheme.shapes.large
-                    ) {
-                        Text(
-                            text = message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DistanceCard(shop: ShopInfo) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 32.dp, horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "最寄り店舗まで",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            val text = formatDistance(shop.distanceMeters)
-            Text(
-                text = text,
-                style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.ExtraBold
-            )
-        }
-    }
-}
-
-@Composable
-private fun DirectionCard(
-    drawableId: Int,
-    rotation: Float,
-    onClick: () -> Unit
-) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
-        )
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (drawableId != 0) {
-                Image(
-                    painter = painterResource(id = drawableId),
-                    contentDescription = "山岡家の方向",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .size(240.dp)
-                        .graphicsLayer { rotationZ = rotation }
-                        .clickable(onClick = onClick)
+                )
+                GlassPillButton(
+                    text = "メニュー",
+                    onClick = onOpenMenu,
+                    icon = Icons.AutoMirrored.Outlined.MenuBook,
+                    modifier = Modifier.weight(1f)
                 )
             }
-        }
-    }
-}
 
-@Composable
-private fun ShopNameCard(name: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        ),
-        shape = MaterialTheme.shapes.extraLarge
-    ) {
-        Text(
-            text = name,
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@Composable
-private fun SpecialRangeCard(shop: ShopInfo) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        ),
-        shape = MaterialTheme.shapes.extraLarge
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(36.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = shop.name,
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = "チェックインして記録しよう",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                textAlign = TextAlign.Center
+            CheckInFeedback(
+                message = checkInFeedbackMessage,
+                modifier = Modifier.padding(top = 12.dp)
             )
         }
     }
@@ -717,7 +593,7 @@ private fun AtShopContent(
     }
 
     val galleryPickerLauncher = rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+        contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
             PhotoRepository.decodeSampledBitmapFromUri(context, uri, 1024)?.let { bitmap ->
@@ -726,144 +602,184 @@ private fun AtShopContent(
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp)
-            .padding(bottom = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .navigationBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = AppSpacing.screen, vertical = 16.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Spacer(modifier = Modifier.weight(1f))
-
-        SpecialRangeCard(shop = shop)
-
-        Spacer(modifier = Modifier.height(40.dp))
-
-        if (isCheckedIn) {
-            Button(
-                onClick = { openMenuInAppBrowser(context) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.ExitToApp,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "メニューを見る",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
-        } else {
-            Button(
-                onClick = {
-                    val checkedIn = stampRepository.checkIn(shop.name)
-                    if (!checkedIn) {
-                        val remainMs = stampRepository.getRemainingCooldownMillis(shop.name)
-                        onCheckInFeedbackMessage(formatCheckInCooldownMessage(remainMs))
-                    } else {
-                        onCheckInFeedbackMessage(null)
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.CheckCircle,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "チェックイン",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 480.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            OutlinedButton(
-                onClick = {
-                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
-                        == PackageManager.PERMISSION_GRANTED
-                    ) {
-                        onOpenCamera(shop.name)
-                    } else {
-                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                    }
-                },
-                modifier = Modifier.weight(1f)
+            GlassSurface(
+                shape = AppShapes.card,
+                level = GlassLevel.Regular,
+                shadowElevation = 8.dp
             ) {
-                Icon(
-                    imageVector = Icons.Filled.AddAPhoto,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("撮影", style = MaterialTheme.typography.labelLarge)
-            }
-
-            OutlinedButton(
-                onClick = { galleryPickerLauncher.launch(
-                    androidx.activity.result.PickVisualMediaRequest(
-                        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
-                    )
-                ) },
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.PhotoLibrary,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("ギャラリー", style = MaterialTheme.typography.labelLarge)
-            }
-
-            OutlinedButton(
-                onClick = onOpenMap,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.LocationOn,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("地図", style = MaterialTheme.typography.labelLarge)
-            }
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        AnimatedVisibility(
-            visible = checkInFeedbackMessage != null,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            checkInFeedbackMessage?.let { message ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    ),
-                    shape = MaterialTheme.shapes.large
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 26.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(66.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.13f),
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.LocationOn,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(30.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = message,
+                        text = "山岡家に到着",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = shop.name,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "チェックインして、訪問の記録を残そう。",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.padding(16.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(22.dp))
+
+                    if (isCheckedIn) {
+                        GlassPillButton(
+                            text = "メニューを見る",
+                            onClick = { openMenuInAppBrowser(context) },
+                            icon = Icons.AutoMirrored.Outlined.MenuBook,
+                            accent = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        GlassPillButton(
+                            text = "チェックイン",
+                            onClick = {
+                                val checkedIn = stampRepository.checkIn(shop.name)
+                                if (!checkedIn) {
+                                    val remainMs = stampRepository.getRemainingCooldownMillis(shop.name)
+                                    onCheckInFeedbackMessage(formatCheckInCooldownMessage(remainMs))
+                                } else {
+                                    onCheckInFeedbackMessage(null)
+                                }
+                            },
+                            icon = Icons.Filled.CheckCircle,
+                            accent = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        GlassPillButton(
+                            text = "撮影",
+                            onClick = {
+                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                                    == PackageManager.PERMISSION_GRANTED
+                                ) {
+                                    onOpenCamera(shop.name)
+                                } else {
+                                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                }
+                            },
+                            icon = Icons.Outlined.AddAPhoto,
+                            compact = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        GlassPillButton(
+                            text = "ギャラリー",
+                            onClick = {
+                                galleryPickerLauncher.launch(
+                                    androidx.activity.result.PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            },
+                            icon = Icons.Outlined.PhotoLibrary,
+                            compact = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        GlassPillButton(
+                            text = "地図",
+                            onClick = onOpenMap,
+                            icon = Icons.Outlined.LocationOn,
+                            compact = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
+            CheckInFeedback(
+                message = checkInFeedbackMessage,
+                modifier = Modifier.padding(top = 14.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun CheckInFeedback(
+    message: String?,
+    modifier: Modifier = Modifier
+) {
+    AnimatedVisibility(
+        visible = message != null,
+        enter = fadeIn(animationSpec = tween(180)),
+        exit = fadeOut(animationSpec = tween(160)),
+        modifier = modifier
+    ) {
+        message?.let { text ->
+            GlassSurface(
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                tint = MaterialTheme.colorScheme.errorContainer,
+                tintAlpha = 0.94f,
+                shadowElevation = 0.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
                     )
                 }
             }
@@ -871,16 +787,9 @@ private fun AtShopContent(
     }
 }
 
-private fun formatCheckInCooldownMessage(remainMs: Long): String {
-    val totalMinutes = (remainMs + 59_999L) / 60_000L
-    val hours = totalMinutes / 60
-    val minutes = totalMinutes % 60
-    return if (hours > 0) {
-        "同じ店舗のチェックインは3時間に1回までです（あと${hours}時間${minutes}分）"
-    } else {
-        "同じ店舗のチェックインは3時間に1回までです（あと${minutes}分）"
-    }
-}
+/* -------------------------------------------------------------------------
+ * Empty / permission / loading states
+ * ---------------------------------------------------------------------- */
 
 @Composable
 private fun PermissionRequestContent(
@@ -890,51 +799,60 @@ private fun PermissionRequestContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .navigationBarsPadding()
+            .padding(horizontal = AppSpacing.screen, vertical = 24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.extraLarge
+        GlassSurface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 480.dp),
+            shape = AppShapes.card,
+            level = GlassLevel.Regular,
+            shadowElevation = 6.dp
         ) {
             Column(
-                modifier = Modifier.padding(28.dp),
+                modifier = Modifier.padding(horizontal = 26.dp, vertical = 30.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    imageVector = Icons.Filled.LocationOn,
-                    contentDescription = null,
+                Box(
                     modifier = Modifier
-                        .size(64.dp)
+                        .size(62.dp)
                         .background(
-                            color = MaterialTheme.colorScheme.primaryContainer,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.13f),
                             shape = CircleShape
-                        )
-                        .padding(14.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Spacer(modifier = Modifier.height(20.dp))
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.LocationOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(18.dp))
                 Text(
                     text = "位置情報を許可してください",
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "現在地から最寄りの山岡家を探すために、位置情報を使用します。",
-                    style = MaterialTheme.typography.bodyLarge,
+                    text = "現在地から最寄りの山岡家までの距離と方角を表示するために使用します。",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(
+                Spacer(modifier = Modifier.height(22.dp))
+                GlassPillButton(
+                    text = "位置情報を許可して検索",
                     onClick = onRequestPermission,
+                    accent = true,
                     modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("位置情報を許可して検索")
-                }
+                )
             }
         }
     }
@@ -943,15 +861,21 @@ private fun PermissionRequestContent(
 @Composable
 private fun LoadingContent() {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .navigationBarsPadding()
+            .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        CircularProgressIndicator(modifier = Modifier.size(48.dp))
+        CircularProgressIndicator(
+            modifier = Modifier.size(40.dp),
+            strokeWidth = 3.dp
+        )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "最寄り店舗を検索中...",
-            style = MaterialTheme.typography.bodyLarge,
+            text = "最寄り店舗を検索中…",
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
@@ -966,49 +890,75 @@ private fun ErrorContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .navigationBarsPadding()
+            .padding(horizontal = AppSpacing.screen, vertical = 24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.extraLarge,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer
-            )
+        GlassSurface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 480.dp),
+            shape = AppShapes.card,
+            level = GlassLevel.Regular,
+            shadowElevation = 4.dp
         ) {
             Column(
-                modifier = Modifier.padding(28.dp),
+                modifier = Modifier.padding(horizontal = 26.dp, vertical = 30.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(62.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.12f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.ErrorOutline,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(18.dp))
                 Text(
-                    text = "エラー",
+                    text = "検索に失敗しました",
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onErrorContainer
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = message,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(onClick = onRetry) {
-                    Text("再試行")
-                }
+                Spacer(modifier = Modifier.height(22.dp))
+                GlassPillButton(
+                    text = "再試行",
+                    onClick = onRetry,
+                    accent = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }
 }
 
+/* -------------------------------------------------------------------------
+ * Splash title
+ * ---------------------------------------------------------------------- */
+
 @Composable
 private fun TitleText(
     prefix: String,
     suffix: String,
-    baseStyle: TextStyle,
-    emphasizedStyle: TextStyle,
+    baseStyle: androidx.compose.ui.text.TextStyle,
+    emphasizedStyle: androidx.compose.ui.text.TextStyle,
     baseColor: Color,
     emphasizedColor: Color,
     emphasize: Boolean,
@@ -1022,39 +972,36 @@ private fun TitleText(
             text = prefix,
             style = baseStyle,
             color = baseColor,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center
         )
         AnimatedContent(
             targetState = suffix,
             transitionSpec = {
-                (slideInVertically(
-                    animationSpec = spring(stiffness = Spring.StiffnessLow),
-                    initialOffsetY = { it }
-                ) + fadeIn(animationSpec = tween(400)) +
-                    scaleIn(
-                        initialScale = 0.5f,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow
-                        )
-                    )) togetherWith
-                    (slideOutVertically(
-                        animationSpec = spring(stiffness = Spring.StiffnessLow),
-                        targetOffsetY = { -it }
-                    ) + fadeOut(animationSpec = tween(400)) +
-                        scaleOut(targetScale = 0.4f, animationSpec = tween(400)))
+                fadeIn(animationSpec = tween(260)) togetherWith
+                    fadeOut(animationSpec = tween(200))
             },
-            label = "suffix"
+            label = "splashSuffix"
         ) { s ->
             Text(
                 text = s,
                 style = if (emphasize) emphasizedStyle else baseStyle,
-                color = if (emphasize) emphasizedColor else baseColor,
-                fontWeight = FontWeight.ExtraBold,
+                color = emphasizedColor,
+                fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
         }
+    }
+}
+
+private fun formatCheckInCooldownMessage(remainMs: Long): String {
+    val totalMinutes = (remainMs + 59_999L) / 60_000L
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    return if (hours > 0) {
+        "同じ店舗のチェックインは3時間に1回までです（あと${hours}時間${minutes}分）"
+    } else {
+        "同じ店舗のチェックインは3時間に1回までです（あと${minutes}分）"
     }
 }
 
@@ -1071,5 +1018,3 @@ private fun openGoogleMaps(context: android.content.Context, coordinates: Coordi
         // ignore
     }
 }
-
-
