@@ -5,10 +5,12 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.LocationManager
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
@@ -20,35 +22,33 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.outlined.AddAPhoto
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.Storefront
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,14 +59,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import java.io.File
 
 private enum class StampFilterMode(val label: String) {
     ALL("全店舗"),
@@ -74,7 +74,6 @@ private enum class StampFilterMode(val label: String) {
     UNVISITED("未訪問")
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("MissingPermission")
 @Composable
 internal fun StampRallyScreen(
@@ -92,11 +91,8 @@ internal fun StampRallyScreen(
         if (hasLocationPermission(context) && currentCoordinates == null) {
             try {
                 val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-                val lastLocation = locationManager?.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                locationManager?.getLastKnownLocation(LocationManager.GPS_PROVIDER)
                     ?: locationManager?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-                lastLocation?.let {
-                    // 注: 実際の現在位置は viewModel から渡される currentCoordinates を主とする
-                }
             } catch (_: SecurityException) { }
         }
     }
@@ -108,7 +104,7 @@ internal fun StampRallyScreen(
     var photoMessage by remember { mutableStateOf<String?>(null) }
 
     val galleryPickerLauncher = rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+        contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         val shop = galleryTargetShop
         if (uri != null && shop != null) {
@@ -193,314 +189,461 @@ internal fun StampRallyScreen(
         return
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "スタンプラリー",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
+    ScreenEnter(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            containerColor = screenContainerColor(),
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            topBar = {
+                GlassTopBar(
+                    title = "スタンプラリー",
+                    onBack = onClose,
+                    actions = {
+                        GlassIconButton(
+                            icon = Icons.Outlined.PhotoLibrary,
+                            contentDescription = "ギャラリーを開く",
+                            onClick = onOpenGallery
+                        )
+                    }
+                )
+            }
+        ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .navigationBarsPadding(),
+                contentPadding = PaddingValues(
+                    start = AppSpacing.screen,
+                    end = AppSpacing.screen,
+                    top = 6.dp,
+                    bottom = 32.dp
+                )
+            ) {
+                item {
+                    ProgressPanel(
+                        visitedCount = visitedCount,
+                        totalCount = filteredNames.size,
+                        progress = progress,
+                        totalCheckIns = ranking.sumOf { it.second }
                     )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "閉じる"
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onOpenGallery) {
-                        Icon(
-                            imageVector = Icons.Filled.PhotoLibrary,
-                            contentDescription = "ギャラリーを開く"
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(AppSpacing.section))
                 }
-            )
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                ProgressCard(
-                    visitedCount = visitedCount,
-                    totalCount = filteredNames.size,
-                    progress = progress,
-                    totalCheckIns = ranking.sumOf { it.second }
-                )
-            }
 
-            item {
-                NearestShopCard(
-                    shop = nearestShop,
-                    isNearby = isNearestNearby,
-                    photoRepository = photoRepository,
-                    photoRefresh = photoRefresh,
-                    onCameraClick = { name ->
-                        if (!isNearestNearby || name != nearestShop?.name) {
-                            photoMessage = "店舗に近づくと写真を撮れます"
-                            return@NearestShopCard
-                        }
-                        pendingShopName = name
-                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
-                            == PackageManager.PERMISSION_GRANTED
-                        ) {
-                            cameraShopName = name
-                        } else {
-                            permissionLauncher.launch(Manifest.permission.CAMERA)
-                        }
-                    },
-                    onGalleryClick = { name ->
-                        galleryTargetShop = name
-                        galleryPickerLauncher.launch(
-                            androidx.activity.result.PickVisualMediaRequest(
-                                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
-                            )
-                        )
+                item {
+                    val latestPhoto = remember(photoRefresh, nearestShop?.name) {
+                        nearestShop?.name?.let { photoRepository.getLatestPhoto(it) }
                     }
-                )
-            }
-
-            item {
-                AnimatedVisibility(
-                    visible = photoMessage != null,
-                    enter = fadeIn(),
-                    exit = fadeOut()
-                ) {
-                    photoMessage?.let { message ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer
-                            ),
-                            shape = MaterialTheme.shapes.large
-                        ) {
-                            Text(
-                                text = message,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.padding(16.dp)
+                    val photoBitmap = remember(photoRefresh, latestPhoto?.file?.absolutePath) {
+                        latestPhoto?.let { photoRepository.loadBitmap(it) }
+                    }
+                    NearestShopSection(
+                        shop = nearestShop,
+                        isNearby = isNearestNearby,
+                        photoBitmap = photoBitmap,
+                        onCameraClick = { name ->
+                            if (!isNearestNearby || name != nearestShop?.name) {
+                                photoMessage = "店舗に近づくと写真を撮れます"
+                                return@NearestShopSection
+                            }
+                            pendingShopName = name
+                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                                == PackageManager.PERMISSION_GRANTED
+                            ) {
+                                cameraShopName = name
+                            } else {
+                                permissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
+                        },
+                        onGalleryClick = { name ->
+                            galleryTargetShop = name
+                            galleryPickerLauncher.launch(
+                                androidx.activity.result.PickVisualMediaRequest(
+                                    androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
                             )
                         }
+                    )
+                    Spacer(modifier = Modifier.height(AppSpacing.section))
+                }
+
+                item {
+                    AnimatedVisibility(
+                        visible = photoMessage != null,
+                        enter = fadeIn(tween(180)),
+                        exit = fadeOut(tween(160))
+                    ) {
+                        photoMessage?.let { message ->
+                            GlassSurface(
+                                modifier = Modifier.padding(bottom = 16.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                tint = MaterialTheme.colorScheme.errorContainer,
+                                tintAlpha = 0.94f,
+                                shadowElevation = 0.dp
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Info,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = message,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
-            }
 
-            item {
-                FilterSection(
-                    prefectures = prefectures,
-                    selectedPrefecture = selectedPrefecture,
-                    onPrefectureSelected = { selectedPrefecture = it },
-                    filterMode = filterMode,
-                    onFilterModeChanged = { filterMode = it }
-                )
-            }
+                item {
+                    FilterSection(
+                        prefectures = prefectures,
+                        selectedPrefecture = selectedPrefecture,
+                        onPrefectureSelected = { selectedPrefecture = it },
+                        filterMode = filterMode,
+                        onFilterModeChanged = { filterMode = it }
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
 
-            items(ranking, key = { it.first }) { (name, count, distance) ->
-                val latestPhoto = remember(photoRefresh, name) {
-                    photoRepository.getLatestPhoto(name)
-                }
-                val photoBitmap = remember(photoRefresh, latestPhoto?.file?.absolutePath) {
-                    latestPhoto?.let { photoRepository.loadBitmap(it) }
-                }
-                val distanceToShop = currentCoordinates?.let { loc ->
-                    shopCoordinatesMap[name]?.let { coords -> calculateDistanceMeters(loc, coords) }
-                }
-                val isNearby = distanceToShop != null && distanceToShop <= KOKO_RADIUS_METERS
-
-                ShopRowCard(
-                    name = name,
-                    count = count,
-                    distance = distanceToShop,
-                    isNearby = isNearby,
-                    photoBitmap = photoBitmap,
-                    onCameraClick = {
-                        if (!isNearby) {
-                            photoMessage = "$name は現在の位置から遠いため、写真を撮れません"
-                            return@ShopRowCard
-                        }
-                        pendingShopName = name
-                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
-                            == PackageManager.PERMISSION_GRANTED
-                        ) {
-                            cameraShopName = name
-                        } else {
-                            permissionLauncher.launch(Manifest.permission.CAMERA)
-                        }
-                    },
-                    onGalleryClick = {
-                        galleryTargetShop = name
-                        galleryPickerLauncher.launch(
-                            androidx.activity.result.PickVisualMediaRequest(
-                                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
-                            )
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 4.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "店舗一覧",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text(
+                            text = "${ranking.size} 店舗",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                )
+                }
+
+                if (ranking.isEmpty()) {
+                    item {
+                        GlassSurface(
+                            modifier = Modifier.padding(top = 12.dp),
+                            shape = AppShapes.card,
+                            level = GlassLevel.Thin,
+                            shadowElevation = 0.dp
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp, horizontal = 20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Storefront,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                                    modifier = Modifier.size(30.dp)
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = "条件に一致する店舗がありません",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "表示や都道府県のフィルターを変えてみてください",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    itemsIndexed(
+                        items = ranking,
+                        key = { _, item -> item.first }
+                    ) { index, item ->
+                        val (name, count, _) = item
+                        val latestPhoto = remember(photoRefresh, name) {
+                            photoRepository.getLatestPhoto(name)
+                        }
+                        val photoBitmap = remember(photoRefresh, latestPhoto?.file?.absolutePath) {
+                            latestPhoto?.let { photoRepository.loadBitmap(it) }
+                        }
+                        val distanceToShop = currentCoordinates?.let { loc ->
+                            shopCoordinatesMap[name]?.let { coords -> calculateDistanceMeters(loc, coords) }
+                        }
+                        val isNearby = distanceToShop != null && distanceToShop <= KOKO_RADIUS_METERS
+
+                        ShopListRow(
+                            name = name,
+                            count = count,
+                            distance = distanceToShop,
+                            isNearby = isNearby,
+                            photoBitmap = photoBitmap,
+                            showDivider = index != ranking.lastIndex,
+                            onCameraClick = {
+                                if (!isNearby) {
+                                    photoMessage = "$name は現在の位置から遠いため、写真を撮れません"
+                                    return@ShopListRow
+                                }
+                                pendingShopName = name
+                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                                    == PackageManager.PERMISSION_GRANTED
+                                ) {
+                                    cameraShopName = name
+                                } else {
+                                    permissionLauncher.launch(Manifest.permission.CAMERA)
+                                }
+                            },
+                            onGalleryClick = {
+                                galleryTargetShop = name
+                                galleryPickerLauncher.launch(
+                                    androidx.activity.result.PickVisualMediaRequest(
+                                        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            }
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ProgressCard(
+private fun ProgressPanel(
     visitedCount: Int,
     totalCount: Int,
     progress: Float,
     totalCheckIns: Int
 ) {
-    ElevatedCard(
+    val reduceMotion = LocalReduceMotion.current
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress.coerceIn(0f, 1f),
+        animationSpec = tween(if (reduceMotion) 0 else 420, easing = FastOutSlowInEasing),
+        label = "stampProgress"
+    )
+
+    GlassSurface(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
+        shape = AppShapes.card,
+        level = GlassLevel.Regular,
+        shadowElevation = 8.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = 20.dp, vertical = 18.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
+            Text(
+                text = "訪問済み",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     text = "$visitedCount",
-                    style = MaterialTheme.typography.displayLarge,
-                    color = liquidGlassTextAccent(),
-                    fontWeight = FontWeight.ExtraBold
+                    style = MaterialTheme.typography.displayMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = liquidGlassTextAccent()
                 )
                 Text(
-                    text = "/ $totalCount 店舗",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    text = " / $totalCount 店舗",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 7.dp)
                 )
             }
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f)
-            )
-            Text(
-                text = "総チェックイン: ${totalCheckIns} 回",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            Spacer(modifier = Modifier.height(14.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(5.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(animatedProgress)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(15.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "総チェックイン $totalCheckIns 回",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun NearestShopCard(
+private fun NearestShopSection(
     shop: ShopInfo?,
     isNearby: Boolean,
-    photoRepository: PhotoRepository,
-    photoRefresh: Int,
+    photoBitmap: androidx.compose.ui.graphics.ImageBitmap?,
     onCameraClick: (String) -> Unit,
     onGalleryClick: (String) -> Unit
 ) {
-    val latestPhoto = remember(photoRefresh, shop?.name) {
-        shop?.name?.let { photoRepository.getLatestPhoto(it) }
-    }
-    val photoBitmap = remember(photoRefresh, latestPhoto?.file?.absolutePath) {
-        latestPhoto?.let { photoRepository.loadBitmap(it) }
-    }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SectionLabel(text = "いま一番近い店舗")
+        Spacer(modifier = Modifier.height(10.dp))
 
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        )
-    ) {
-        Column(
+        if (shop == null) {
+            GlassSurface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = AppShapes.card,
+                level = GlassLevel.Thin,
+                shadowElevation = 0.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "現在地を取得中…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            return@Column
+        }
+
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .height(172.dp)
+                .clip(AppShapes.card)
         ) {
-            Text(
-                text = if (shop != null) "いま一番近い店舗" else "現在地を取得中…",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-            )
-            if (shop != null) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+            if (photoBitmap != null) {
+                Image(
+                    bitmap = photoBitmap,
+                    contentDescription = "${shop.name} で撮影した写真",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    MaterialTheme.colorScheme.surfaceContainer
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
-                    if (photoBitmap != null) {
-                        Image(
-                            bitmap = photoBitmap,
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Outlined.Storefront,
                             contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
+                            modifier = Modifier.size(32.dp)
                         )
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = shop.name,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            text = "訪れたら写真を残そう",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Filled.LocationOn,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = formatDistanceForStamp(shop.distanceMeters),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                            )
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        IconButton(onClick = { onGalleryClick(shop.name) }) {
-                            Icon(
-                                imageVector = Icons.Filled.PhotoLibrary,
-                                contentDescription = "ギャラリーから選ぶ",
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
-                        IconButton(
-                            onClick = { onCameraClick(shop.name) },
-                            enabled = isNearby
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.AddAPhoto,
-                                contentDescription = "写真を撮る",
-                                tint = if (isNearby) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.38f)
-                                }
-                            )
-                        }
                     }
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = shop.name,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.LocationOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = formatDistanceForStamp(shop.distanceMeters),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (!isNearby) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "写真の撮影は店舗の近くでできます",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            GlassIconButton(
+                icon = Icons.Outlined.PhotoLibrary,
+                contentDescription = "ギャラリーから写真を選ぶ",
+                onClick = { onGalleryClick(shop.name) }
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            GlassIconButton(
+                icon = Icons.Outlined.AddAPhoto,
+                contentDescription = "写真を撮る",
+                onClick = { onCameraClick(shop.name) },
+                tint = if (isNearby) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                }
+            )
         }
     }
 }
@@ -513,15 +656,8 @@ private fun FilterSection(
     filterMode: StampFilterMode,
     onFilterModeChanged: (StampFilterMode) -> Unit
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = "表示",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = liquidGlassTextAccent()
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SectionLabel(text = "表示")
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -529,36 +665,32 @@ private fun FilterSection(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             StampFilterMode.entries.forEach { mode ->
-                FilterChip(
+                FilterPill(
+                    label = mode.label,
                     selected = filterMode == mode,
-                    onClick = { onFilterModeChanged(mode) },
-                    label = { Text(mode.label) }
+                    onClick = { onFilterModeChanged(mode) }
                 )
             }
         }
 
-        Text(
-            text = "都道府県",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = liquidGlassTextAccent()
-        )
+        Spacer(modifier = Modifier.height(6.dp))
+        SectionLabel(text = "都道府県")
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            FilterChip(
+            FilterPill(
+                label = "すべて",
                 selected = selectedPrefecture == null,
-                onClick = { onPrefectureSelected(null) },
-                label = { Text("全て") }
+                onClick = { onPrefectureSelected(null) }
             )
             prefectures.forEach { pref ->
-                FilterChip(
+                FilterPill(
+                    label = pref,
                     selected = selectedPrefecture == pref,
-                    onClick = { onPrefectureSelected(pref) },
-                    label = { Text(pref) }
+                    onClick = { onPrefectureSelected(pref) }
                 )
             }
         }
@@ -566,118 +698,143 @@ private fun FilterSection(
 }
 
 @Composable
-private fun ShopRowCard(
+private fun ShopListRow(
     name: String,
     count: Int,
     distance: Float?,
     isNearby: Boolean,
     photoBitmap: androidx.compose.ui.graphics.ImageBitmap?,
+    showDivider: Boolean,
     onCameraClick: () -> Unit,
     onGalleryClick: () -> Unit
 ) {
     val isVisited = count > 0
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
-        )
-    ) {
+
+    Column {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            if (photoBitmap != null) {
-                Image(
-                    bitmap = photoBitmap,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.AddAPhoto,
+            Box(
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(AppShapes.thumbnail)
+            ) {
+                if (photoBitmap != null) {
+                    Image(
+                        bitmap = photoBitmap,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
-                        modifier = Modifier.size(32.dp)
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        MaterialTheme.colorScheme.surfaceContainer
+                                    )
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Storefront,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.32f),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                if (isVisited) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(4.dp)
+                            .size(17.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.CheckCircle,
+                            contentDescription = "訪問済み",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(13.dp)
+                        )
+                    }
                 }
             }
+
+            Spacer(modifier = Modifier.width(14.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = name,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (isVisited) FontWeight.Bold else FontWeight.Normal,
+                    fontWeight = if (isVisited) FontWeight.SemiBold else FontWeight.Normal,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Filled.LocationOn,
+                        imageVector = Icons.Outlined.LocationOn,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
                     Text(
                         text = distance?.let { formatDistanceForStamp(it) } ?: "--",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
-                if (isVisited) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Filled.CheckCircle,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = liquidGlassTextAccent()
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+                    if (isVisited) {
+                        Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "${count}回チェックイン",
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = "$count 回",
+                            style = MaterialTheme.typography.labelSmall,
                             color = liquidGlassTextAccent()
                         )
                     }
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                IconButton(onClick = onGalleryClick) {
-                    Icon(
-                        imageVector = Icons.Filled.PhotoLibrary,
-                        contentDescription = "$name のギャラリーから選ぶ",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                IconButton(onClick = onCameraClick) {
-                    Icon(
-                        imageVector = Icons.Filled.AddAPhoto,
-                        contentDescription = "$name で写真を撮る",
-                        tint = if (isNearby) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                        }
-                    )
-                }
+            IconButton(
+                onClick = onGalleryClick,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.PhotoLibrary,
+                    contentDescription = "$name のギャラリーから選ぶ",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
             }
+            IconButton(
+                onClick = onCameraClick,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.AddAPhoto,
+                    contentDescription = "$name で写真を撮る",
+                    tint = if (isNearby) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.42f)
+                    },
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+        if (showDivider) {
+            Hairline(modifier = Modifier.padding(start = 74.dp))
         }
     }
 }
@@ -686,5 +843,3 @@ private fun formatDistanceForStamp(meters: Float): String = when {
     meters < 1000f -> "${meters.toInt()} m"
     else -> "%.1f km".format(meters / 1000f)
 }
-
-
