@@ -47,7 +47,6 @@ class YamaokayaViewModel(application: Application) : AndroidViewModel(applicatio
     fun updateSettings(newSettings: AppSettings) {
         val oldInterval = _appSettings.value.locationUpdateIntervalSeconds
         val oldTracker = _appSettings.value.trackerNotificationEnabled
-        val oldLiquidGlass = _appSettings.value.liquidGlassEnabled
 
         _appSettings.value = newSettings
         settingsRepository.save(newSettings)
@@ -58,11 +57,6 @@ class YamaokayaViewModel(application: Application) : AndroidViewModel(applicatio
 
         if (oldTracker != newSettings.trackerNotificationEnabled) {
             updateTrackerServiceState()
-        }
-
-        // 見た目の設定が変わったら、ホーム画面のウィジェットも即座に作り直す
-        if (oldLiquidGlass != newSettings.liquidGlassEnabled) {
-            YamaokayaWidgetProvider.updateAllWidgets(getApplication())
         }
     }
 

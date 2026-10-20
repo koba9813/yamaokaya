@@ -15,8 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FileDownload
-import androidx.compose.material.icons.outlined.FileUpload
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
@@ -161,12 +161,16 @@ internal fun BackupSection(
         }
     }
 
-    SettingsGroup {
+    SectionTitle(title = "データの引き継ぎ")
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "現在のデータ",
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.Bold
             )
             Text(
                 text = "写真 ${photoCount} 枚 / スタンプ ${visitedShopCount} 店舗・合計 ${totalCheckInCount} 回",
@@ -180,29 +184,37 @@ internal fun BackupSection(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                GlassPillButton(
-                    text = "書き出す",
+                OutlinedButton(
                     onClick = {
                         pendingExportFileName = BackupManager.suggestedFileName()
                         exportLauncher.launch(pendingExportFileName)
-                    },
-                    icon = Icons.Outlined.FileUpload,
-                    compact = true,
-                    modifier = Modifier.weight(1f)
-                )
-                GlassPillButton(
-                    text = "読み込む",
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.FileUpload,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("書き出す")
+                }
+                OutlinedButton(
                     onClick = {
                         importLauncher.launch(
                             arrayOf(BACKUP_MIME_TYPE, "application/octet-stream")
                         )
-                    },
-                    icon = Icons.Outlined.FileDownload,
-                    compact = true,
-                    modifier = Modifier.weight(1f)
-                )
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.FileDownload,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("読み込む")
+                }
             }
         }
     }

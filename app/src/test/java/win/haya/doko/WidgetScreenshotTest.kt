@@ -18,7 +18,7 @@ import java.io.File
 import java.io.FileOutputStream
 
 /**
- * ウィジェットの各レイアウト（通常 / Liquid Glass）を PNG に書き出す確認用テスト。
+ * ウィジェットの各レイアウトを PNG に書き出す確認用テスト。
  *
  * RemoteViews を実際に適用してから、壁紙に見立てた背景の上に描画する。
  */
@@ -28,39 +28,25 @@ import java.io.FileOutputStream
 class WidgetScreenshotTest {
 
     @Test
-    fun small_normal() = render(R.layout.widget_yamaokaya, glass = false, 340, 150, "widget_small_normal")
+    fun small() = render(R.layout.widget_yamaokaya, 340, 150, "widget_small")
 
     @Test
-    fun small_glass() = render(R.layout.widget_yamaokaya, glass = true, 340, 150, "widget_small_glass")
+    fun wide() = render(R.layout.widget_yamaokaya_wide, 340, 110, "widget_wide")
 
     @Test
-    fun wide_normal() = render(R.layout.widget_yamaokaya_wide, glass = false, 340, 110, "widget_wide_normal")
+    fun compact() = render(R.layout.widget_yamaokaya_compact, 340, 70, "widget_compact")
 
     @Test
-    fun wide_glass() = render(R.layout.widget_yamaokaya_wide, glass = true, 340, 110, "widget_wide_glass")
-
-    @Test
-    fun compact_normal() = render(R.layout.widget_yamaokaya_compact, glass = false, 340, 70, "widget_compact_normal")
-
-    @Test
-    fun compact_glass() = render(R.layout.widget_yamaokaya_compact, glass = true, 340, 70, "widget_compact_glass")
-
-    @Test
-    fun minimal_normal() = render(R.layout.widget_yamaokaya_minimal, glass = false, 170, 170, "widget_minimal_normal")
-
-    @Test
-    fun minimal_glass() = render(R.layout.widget_yamaokaya_minimal, glass = true, 170, 170, "widget_minimal_glass")
+    fun minimal() = render(R.layout.widget_yamaokaya_minimal, 170, 170, "widget_minimal")
 
     private fun render(
         layoutId: Int,
-        glass: Boolean,
         widthDp: Int,
         heightDp: Int,
         name: String
     ) {
         val context: Context = ApplicationProvider.getApplicationContext()
         val remoteViews = RemoteViews(context.packageName, layoutId)
-        WidgetUpdater.applyStyle(context, remoteViews, layoutId, liquidGlass = glass)
         val view = remoteViews.apply(context, FrameLayout(context))
 
         view.findViewById<TextView>(R.id.widget_shop_name)?.text = "山岡家 すすきの店"

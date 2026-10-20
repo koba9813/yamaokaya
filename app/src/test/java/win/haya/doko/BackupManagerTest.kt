@@ -67,8 +67,7 @@ class BackupManagerTest {
             proximityNotificationEnabled = false,
             trackerNotificationEnabled = true,
             locationUpdateIntervalSeconds = 30,
-            themeMode = ThemeMode.YAMAOKAYA,
-            liquidGlassEnabled = true
+            themeMode = ThemeMode.YAMAOKAYA
         )
 
         val uri = backupUri()
@@ -348,8 +347,6 @@ class BackupManagerTest {
         assertEquals(MAX_CHECK_IN_COUNT, stampRepository.getCount("B店"))
         // 不正なテーマ・更新間隔は既定値に丸める
         assertEquals(ThemeMode.DARK, result.importedSettings?.themeMode)
-        // 古いバックアップに liquidGlass が無くてもオフとして扱う
-        assertEquals(false, result.importedSettings?.liquidGlassEnabled)
         assertEquals(
             SettingsRepository.DEFAULT_LOCATION_INTERVAL_SECONDS,
             result.importedSettings?.locationUpdateIntervalSeconds

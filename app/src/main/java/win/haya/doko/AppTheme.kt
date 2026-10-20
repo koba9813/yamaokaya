@@ -2,103 +2,45 @@ package win.haya.doko
 
 import android.app.Activity
 import android.os.Build
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 
-/**
- * Android のシステムフォント（Roboto / Noto Sans JP）を優先する。
- * 日本語の詰まりを避けるため、字間は詰めず、ウェイトで階層を作る。
- */
+internal val zenMaruGothicFont = FontFamily(
+    Font(resId = R.font.zen_maru_gothic_regular, weight = FontWeight.Normal),
+    Font(resId = R.font.zen_maru_gothic_bold, weight = FontWeight.Bold)
+)
+
 internal val appTypography = Typography().let { base ->
     Typography(
-        displayLarge = base.displayLarge.withSystemFont(FontWeight.Bold, (-0.5).sp),
-        displayMedium = base.displayMedium.withSystemFont(FontWeight.Bold, (-0.25).sp),
-        displaySmall = base.displaySmall.withSystemFont(FontWeight.SemiBold, 0.sp),
-        headlineLarge = base.headlineLarge.withSystemFont(FontWeight.SemiBold, 0.sp),
-        headlineMedium = base.headlineMedium.withSystemFont(FontWeight.SemiBold, 0.sp),
-        headlineSmall = base.headlineSmall.withSystemFont(FontWeight.SemiBold, 0.sp),
-        titleLarge = base.titleLarge.copy(
-            fontFamily = FontFamily.Default,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 21.sp,
-            letterSpacing = 0.sp
-        ),
-        titleMedium = base.titleMedium.withSystemFont(FontWeight.Medium, 0.sp),
-        titleSmall = base.titleSmall.withSystemFont(FontWeight.Medium, 0.sp),
-        bodyLarge = base.bodyLarge.copy(
-            fontFamily = FontFamily.Default,
-            fontSize = 16.sp,
-            lineHeight = 24.sp,
-            letterSpacing = 0.sp
-        ),
-        bodyMedium = base.bodyMedium.copy(
-            fontFamily = FontFamily.Default,
-            fontSize = 14.sp,
-            lineHeight = 21.sp,
-            letterSpacing = 0.sp
-        ),
-        bodySmall = base.bodySmall.copy(
-            fontFamily = FontFamily.Default,
-            fontSize = 12.sp,
-            lineHeight = 18.sp,
-            letterSpacing = 0.sp
-        ),
-        labelLarge = base.labelLarge.copy(
-            fontFamily = FontFamily.Default,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 0.sp
-        ),
-        labelMedium = base.labelMedium.copy(
-            fontFamily = FontFamily.Default,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 0.sp
-        ),
-        labelSmall = base.labelSmall.copy(
-            fontFamily = FontFamily.Default,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 0.sp
-        )
+        displayLarge = base.displayLarge.copy(fontFamily = zenMaruGothicFont),
+        displayMedium = base.displayMedium.copy(fontFamily = zenMaruGothicFont),
+        displaySmall = base.displaySmall.copy(fontFamily = zenMaruGothicFont),
+        headlineLarge = base.headlineLarge.copy(fontFamily = zenMaruGothicFont),
+        headlineMedium = base.headlineMedium.copy(fontFamily = zenMaruGothicFont),
+        headlineSmall = base.headlineSmall.copy(fontFamily = zenMaruGothicFont),
+        titleLarge = base.titleLarge.copy(fontFamily = zenMaruGothicFont),
+        titleMedium = base.titleMedium.copy(fontFamily = zenMaruGothicFont),
+        titleSmall = base.titleSmall.copy(fontFamily = zenMaruGothicFont),
+        bodyLarge = base.bodyLarge.copy(fontFamily = zenMaruGothicFont),
+        bodyMedium = base.bodyMedium.copy(fontFamily = zenMaruGothicFont),
+        bodySmall = base.bodySmall.copy(fontFamily = zenMaruGothicFont),
+        labelLarge = base.labelLarge.copy(fontFamily = zenMaruGothicFont),
+        labelMedium = base.labelMedium.copy(fontFamily = zenMaruGothicFont),
+        labelSmall = base.labelSmall.copy(fontFamily = zenMaruGothicFont)
     )
 }
-
-private fun TextStyle.withSystemFont(weight: FontWeight, spacing: androidx.compose.ui.unit.TextUnit) =
-    copy(
-        fontFamily = FontFamily.Default,
-        fontWeight = weight,
-        letterSpacing = spacing
-    )
-
-internal val appShapes = Shapes(
-    extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(12.dp),
-    medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(20.dp),
-    extraLarge = RoundedCornerShape(24.dp)
-)
 
 internal val lightColorScheme = lightColorScheme(
     primary = primaryLight,
@@ -235,16 +177,9 @@ internal fun colorSchemeFor(themeMode: ThemeMode): ColorScheme {
 @Composable
 fun YamaokayaTheme(
     themeMode: ThemeMode = ThemeMode.DARK,
-    liquidGlassEnabled: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val baseColorScheme = colorSchemeFor(themeMode)
-    val colorScheme = if (liquidGlassEnabled) {
-        liquidGlassColorScheme(baseColorScheme, themeMode.isDark)
-    } else {
-        baseColorScheme
-    }
-    val canvas = liquidGlassCanvas(themeMode)
+    val colorScheme = colorSchemeFor(themeMode)
 
     // ステータスバー / ナビゲーションバーのアイコン色をテーマに合わせる。
     // （ライトテーマで白アイコンが白背景に埋もれるのを防ぐ）
@@ -258,32 +193,9 @@ fun YamaokayaTheme(
         }
     }
 
-    CompositionLocalProvider(
-        LocalLiquidGlass provides LiquidGlassStyle(
-            enabled = liquidGlassEnabled,
-            isDark = themeMode.isDark,
-            canvas = canvas
-        )
-    ) {
-        ProvideReduceMotion {
-            MaterialTheme(
-                colorScheme = colorScheme,
-                typography = appTypography,
-                shapes = appShapes
-            ) {
-                // MaterialTheme 自体は LocalContentColor を設定しないため、
-                // 色を明示しない Text が端末既定の黒になってしまうのを防ぐ。
-                CompositionLocalProvider(LocalContentColor provides colorScheme.onSurface) {
-                    if (liquidGlassEnabled) {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            LiquidGlassBackdrop(themeMode = themeMode)
-                            content()
-                        }
-                    } else {
-                        content()
-                    }
-                }
-            }
-        }
-    }
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = appTypography,
+        content = content
+    )
 }

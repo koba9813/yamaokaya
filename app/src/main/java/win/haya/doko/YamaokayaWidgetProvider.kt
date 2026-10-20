@@ -6,12 +6,10 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.RemoteViews
-import androidx.core.content.ContextCompat
 
 /**
  * 標準ウィジェット。配置されたサイズに応じて small / wide / tall の
@@ -135,10 +133,7 @@ internal object WidgetUpdater {
         appWidgetId: Int,
         layoutId: Int
     ) {
-        val liquidGlass = SettingsRepository(context).getSettings().liquidGlassEnabled
-
         val views = RemoteViews(context.packageName, layoutId)
-        applyStyle(context, views, layoutId, liquidGlass)
         bindData(context, views, layoutId)
 
         val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
@@ -153,45 +148,6 @@ internal object WidgetUpdater {
         }
 
         appWidgetManager.updateAppWidget(appWidgetId, views)
-    }
-
-    /** Liquid Glass 有効時は、すりガラス風の背景と白系の文字色に差し替える。 */
-    internal fun applyStyle(context: Context, views: RemoteViews, layoutId: Int, liquidGlass: Boolean) {
-        if (!liquidGlass) return
-
-        views.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.widget_background_glass)
-
-        val primary = ContextCompat.getColor(context, R.color.widget_glass_text_primary)
-        val secondary = ContextCompat.getColor(context, R.color.widget_glass_text_secondary)
-        val accent = ContextCompat.getColor(context, R.color.widget_glass_accent)
-
-        // レイアウトに存在しない ID は無視されるため、まとめて指定して問題ない
-        listOf(
-            R.id.widget_title,
-            R.id.widget_shop_name,
-            R.id.widget_shop_name_1,
-            R.id.widget_shop_name_2,
-            R.id.widget_shop_name_3
-        ).forEach { views.setTextColor(it, primary) }
-        listOf(
-            R.id.widget_distance,
-            R.id.widget_distance_1,
-            R.id.widget_distance_2,
-            R.id.widget_distance_3
-        ).forEach { views.setTextColor(it, accent) }
-
-        // タイトル（"Yamaokaya is Doko?"）は少し控えめに
-        views.setTextColor(R.id.widget_title, secondary)
-
-        // 「ルート」ボタン（wide レイアウトのみ）は金背景 + 濃い文字にする
-        if (layoutId == R.layout.widget_yamaokaya_wide) {
-            views.setColorStateList(
-                R.id.widget_map_button,
-                "setBackgroundTintList",
-                ColorStateList.valueOf(accent)
-            )
-            views.setTextColor(R.id.widget_map_button, ContextCompat.getColor(context, R.color.widget_glass_button_text))
-        }
     }
 
     private fun selectLayout(context: Context, options: Bundle?): Int {

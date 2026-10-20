@@ -36,19 +36,6 @@ class SettingsRepositoryTest {
         assertTrue(settings.proximityNotificationEnabled)
         assertTrue(settings.trackerNotificationEnabled)
         assertEquals(10, settings.locationUpdateIntervalSeconds)
-        // Liquid Glass はベータのため既定はオフ
-        assertFalse(settings.liquidGlassEnabled)
-    }
-
-    @Test
-    fun save_persistsLiquidGlass() {
-        repository.save(repository.getSettings().copy(liquidGlassEnabled = true))
-
-        assertTrue(SettingsRepository(context).getSettings().liquidGlassEnabled)
-
-        repository.save(repository.getSettings().copy(liquidGlassEnabled = false))
-
-        assertFalse(SettingsRepository(context).getSettings().liquidGlassEnabled)
     }
 
     @Test
@@ -67,8 +54,7 @@ class SettingsRepositoryTest {
                 proximityNotificationEnabled = false,
                 trackerNotificationEnabled = false,
                 locationUpdateIntervalSeconds = 60,
-                themeMode = ThemeMode.YAMAOKAYA,
-                liquidGlassEnabled = true
+                themeMode = ThemeMode.YAMAOKAYA
             )
         )
 
@@ -77,7 +63,6 @@ class SettingsRepositoryTest {
         assertEquals(false, restored.trackerNotificationEnabled)
         assertEquals(60, restored.locationUpdateIntervalSeconds)
         assertEquals(ThemeMode.YAMAOKAYA, restored.themeMode)
-        assertTrue(restored.liquidGlassEnabled)
     }
 
     @Test
