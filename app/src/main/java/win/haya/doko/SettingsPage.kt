@@ -2,51 +2,47 @@ package win.haya.doko
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.BlurOn
+import androidx.compose.material.icons.outlined.BlurOn
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,18 +50,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SettingsPage(
     appSettings: AppSettings,
@@ -83,210 +81,145 @@ internal fun SettingsPage(
         settings = appSettings
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "設定",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "閉じる"
-                        )
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            ThemeSection(
-                selected = settings.themeMode,
-                onThemeSelected = { mode ->
-                    settings = settings.copy(themeMode = mode)
-                    onSettingsChanged(settings)
-                }
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            LiquidGlassSection(
-                enabled = settings.liquidGlassEnabled,
-                onEnabledChange = { enabled ->
-                    settings = settings.copy(liquidGlassEnabled = enabled)
-                    onSettingsChanged(settings)
-                }
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            SectionTitle(title = "位置情報")
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge
+    ScreenEnter(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            containerColor = screenContainerColor(),
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            topBar = {
+                GlassTopBar(
+                    title = "設定",
+                    onBack = onClose
+                )
+            }
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding()
+                    .padding(horizontal = AppSpacing.screen)
             ) {
-                Column {
-                    ListItem(
-                        headlineContent = { Text("位置情報の権限") },
-                        supportingContent = { Text("OS の設定から変更できます") },
-                        leadingContent = {
-                            Icon(
-                                imageVector = Icons.Filled.LocationOn,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        },
-                        trailingContent = {
-                            OutlinedButton(
-                                onClick = {
-                                    val intent = Intent(
-                                        android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-                                    ).apply {
-                                        data = Uri.fromParts("package", context.packageName, null)
-                                    }
-                                    context.startActivity(intent)
-                                }
-                            ) {
-                                Text("開く")
-                            }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                SectionTitle(title = "テーマ")
+                Spacer(modifier = Modifier.height(8.dp))
+                ThemeSection(
+                    selected = settings.themeMode,
+                    onThemeSelected = { mode ->
+                        settings = settings.copy(themeMode = mode)
+                        onSettingsChanged(settings)
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                SectionTitle(title = "Liquid Glass")
+                Spacer(modifier = Modifier.height(8.dp))
+                LiquidGlassSection(
+                    enabled = settings.liquidGlassEnabled,
+                    onEnabledChange = { enabled ->
+                        settings = settings.copy(liquidGlassEnabled = enabled)
+                        onSettingsChanged(settings)
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                SectionTitle(title = "位置情報")
+                Spacer(modifier = Modifier.height(8.dp))
+                LocationSection(
+                    intervalSeconds = settings.locationUpdateIntervalSeconds,
+                    onIntervalChange = { seconds ->
+                        settings = settings.copy(locationUpdateIntervalSeconds = seconds)
+                        onSettingsChanged(settings)
+                    },
+                    onOpenSystemSettings = {
+                        val intent = Intent(
+                            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                        ).apply {
+                            data = Uri.fromParts("package", context.packageName, null)
                         }
-                    )
-                    HorizontalDivider()
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "位置情報の更新間隔",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "${settings.locationUpdateIntervalSeconds} 秒ごとに更新",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SettingsRepository.LOCATION_UPDATE_INTERVAL_OPTIONS.forEach { sec ->
-                                FilterChip(
-                                    selected = settings.locationUpdateIntervalSeconds == sec,
-                                    onClick = {
-                                        settings = settings.copy(locationUpdateIntervalSeconds = sec)
-                                        onSettingsChanged(settings)
-                                    },
-                                    label = { Text("${sec}s") }
-                                )
-                            }
+                        context.startActivity(intent)
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                SectionTitle(title = "通知")
+                Spacer(modifier = Modifier.height(8.dp))
+                NotificationSection(
+                    proximityEnabled = settings.proximityNotificationEnabled,
+                    onProximityChange = {
+                        settings = settings.copy(proximityNotificationEnabled = it)
+                        onSettingsChanged(settings)
+                    },
+                    trackerEnabled = settings.trackerNotificationEnabled,
+                    onTrackerChange = {
+                        settings = settings.copy(trackerNotificationEnabled = it)
+                        onSettingsChanged(settings)
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                SectionTitle(title = "データの引き継ぎ")
+                Spacer(modifier = Modifier.height(8.dp))
+                BackupSection(
+                    currentSettings = settings,
+                    onSettingsImported = { imported ->
+                        settings = imported
+                        onSettingsChanged(imported)
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                SectionTitle(title = "アップデート")
+                Spacer(modifier = Modifier.height(8.dp))
+                UpdateSection(
+                    state = updateState,
+                    onCheckUpdate = {
+                        updateState = UpdateFlowState.Checking
+                        coroutineScope.launch {
+                            updateState = checkForUpdate(context)
                         }
                     }
-                }
-            }
+                )
 
-            Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(28.dp))
 
-            SectionTitle(title = "通知")
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge
-            ) {
-                Column {
-                    SwitchItem(
-                        icon = Icons.Filled.Notifications,
-                        iconTint = MaterialTheme.colorScheme.primary,
-                        title = "接近通知",
-                        body = "山岡家の 50m 以内に入ると通知",
-                        checked = settings.proximityNotificationEnabled,
-                        onCheckedChange = {
-                            settings = settings.copy(proximityNotificationEnabled = it)
-                            onSettingsChanged(settings)
+                SectionTitle(title = "アプリ情報")
+                Spacer(modifier = Modifier.height(8.dp))
+                AppInfoSection(context = context)
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                SectionTitle(title = "開発者")
+                Spacer(modifier = Modifier.height(8.dp))
+                DeveloperSection(
+                    onOpenDeveloper = { uriHandler.openUri("https://github.com/koba9813") }
+                )
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                SectionTitle(title = "フィードバック")
+                Spacer(modifier = Modifier.height(8.dp))
+                FeedbackSection(
+                    onOpenIssue = { uriHandler.openUri("https://github.com/koba9813/yamaokaya/issues/new") },
+                    onSendEmail = {
+                        val intent = Intent(Intent.ACTION_SENDTO).apply {
+                            data = Uri.parse("mailto:")
+                            putExtra(Intent.EXTRA_SUBJECT, "Yamaokaya is Doko - 意見・要望")
                         }
-                    )
-                    HorizontalDivider()
-                    SwitchItem(
-                        icon = Icons.Filled.Notifications,
-                        iconTint = MaterialTheme.colorScheme.secondary,
-                        title = "常時通知（距離トラッカー）",
-                        body = "通知バーに最寄り店舗の距離を常時表示",
-                        checked = settings.trackerNotificationEnabled,
-                        onCheckedChange = {
-                            settings = settings.copy(trackerNotificationEnabled = it)
-                            onSettingsChanged(settings)
+                        if (intent.resolveActivity(context.packageManager) != null) {
+                            context.startActivity(intent)
                         }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            BackupSection(
-                currentSettings = settings,
-                onSettingsImported = { imported ->
-                    settings = imported
-                    onSettingsChanged(imported)
-                }
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            SectionTitle(title = "アプリ情報")
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge
-            ) {
-                Column {
-                    ListItem(
-                        headlineContent = { Text("バージョン") },
-                        trailingContent = {
-                            Text(
-                                text = getAppVersionName(context).removePrefix("V."),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    )
-                    HorizontalDivider()
-                    ListItem(
-                        headlineContent = { Text("登録店舗数") },
-                        trailingContent = {
-                            Text(
-                                text = "${YamaokayaFinder.getRegisteredShops().size} 店舗",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    )
-                    HorizontalDivider()
-                    LinkItem(
-                        icon = Icons.Filled.Star,
-                        iconTint = MaterialTheme.colorScheme.primary,
-                        title = "GitHub リポジトリ",
-                        onClick = { uriHandler.openUri("https://github.com/koba9813/yamaokaya") }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            UpdateSection(
-                state = updateState,
-                onCheckUpdate = {
-                    updateState = UpdateFlowState.Checking
-                    coroutineScope.launch {
-                        updateState = checkForUpdate(context)
                     }
-                }
-            )
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+            }
 
             UpdateFlow(
                 state = updateState,
@@ -297,218 +230,32 @@ internal fun SettingsPage(
                     }
                 }
             )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            SectionTitle(title = "開発者")
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge
-            ) {
-                Column {
-                    LinkItem(
-                        icon = Icons.Filled.Star,
-                        iconTint = MaterialTheme.colorScheme.primary,
-                        title = "koba9813",
-                        body = "GitHub @koba9813",
-                        onClick = { uriHandler.openUri("https://github.com/koba9813") }
-                    )
-                    HorizontalDivider()
-                    LinkItem(
-                        icon = Icons.Filled.Info,
-                        iconTint = MaterialTheme.colorScheme.tertiary,
-                        title = "Special Thanks",
-                        body = "Photo by Sagara",
-                        onClick = {}
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            SectionTitle(title = "フィードバック")
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge
-            ) {
-                Column {
-                    LinkItem(
-                        icon = Icons.Filled.Info,
-                        iconTint = MaterialTheme.colorScheme.secondary,
-                        title = "GitHub Issue を作成",
-                        body = "バグ報告や機能リクエストはこちらへ",
-                        onClick = { uriHandler.openUri("https://github.com/koba9813/yamaokaya/issues/new") }
-                    )
-                    HorizontalDivider()
-                    LinkItem(
-                        icon = Icons.Filled.Email,
-                        iconTint = MaterialTheme.colorScheme.tertiary,
-                        title = "メールで送る",
-                        body = "Yamaokaya is Doko - 意見・要望",
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_SENDTO).apply {
-                                data = Uri.parse("mailto:")
-                                putExtra(Intent.EXTRA_SUBJECT, "Yamaokaya is Doko - 意見・要望")
-                            }
-                            if (intent.resolveActivity(context.packageManager) != null) {
-                                context.startActivity(intent)
-                            }
-                        }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
         }
     }
 }
 
 @Composable
 internal fun SectionTitle(title: String) {
-    val liquidGlass = LocalLiquidGlass.current.enabled
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
-    ) {
-        if (liquidGlass) {
-            // ガラス背景では赤い見出しが沈むため、ブランド色のドット + 明るい文字にする
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = if (liquidGlass) {
-                MaterialTheme.colorScheme.onSurface
-            } else {
-                MaterialTheme.colorScheme.primary
-            }
-        )
-    }
+    SectionLabel(text = title)
 }
 
-@Composable
-private fun SwitchItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    iconTint: androidx.compose.ui.graphics.Color,
-    title: String,
-    body: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = { Text(body) },
-        leadingContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconTint
-            )
-        },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange
-            )
-        }
-    )
-}
-
-@Composable
-private fun LinkItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    iconTint: androidx.compose.ui.graphics.Color,
-    title: String,
-    body: String? = null,
-    onClick: () -> Unit
-) {
-    ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = body?.let { { Text(it) } },
-        leadingContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconTint
-            )
-        },
-        modifier = Modifier.clickable(onClick = onClick)
-    )
-}
-
-@Composable
-private fun UpdateSection(
-    state: UpdateFlowState,
-    onCheckUpdate: () -> Unit
-) {
-    SectionTitle(title = "アップデート")
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "最新版を確認",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "GitHub Releases から APK を取得します",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            when (state) {
-                is UpdateFlowState.Checking -> {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                }
-                else -> {
-                    OutlinedButton(onClick = onCheckUpdate) {
-                        Icon(
-                            imageVector = Icons.Filled.Download,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("確認")
-                    }
-                }
-            }
-        }
-    }
-}
+/* -------------------------------------------------------------------------
+ * Appearance
+ * ---------------------------------------------------------------------- */
 
 @Composable
 private fun ThemeSection(
     selected: ThemeMode,
     onThemeSelected: (ThemeMode) -> Unit
 ) {
-    SectionTitle(title = "テーマ")
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge
-    ) {
+    SettingsGroup {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "アプリ全体の配色を切り替えます",
+                text = "アプリ全体の配色を選びます",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 ThemeMode.entries.forEach { mode ->
                     ThemeOption(
@@ -519,9 +266,9 @@ private fun ThemeSection(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             Text(
-                text = selected.description,
+                text = "${selected.displayName}：${selected.description}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -529,60 +276,61 @@ private fun ThemeSection(
     }
 }
 
-/**
- * Liquid Glass（ベータ）のオン / オフ。
- * 実際の見た目に近いミニプレビュー付きで表示する。
- */
 @Composable
 private fun LiquidGlassSection(
     enabled: Boolean,
     onEnabledChange: (Boolean) -> Unit
 ) {
-    SectionTitle(title = "Liquid Glass")
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge
-    ) {
-        Column {
-            ListItem(
-                headlineContent = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Liquid Glass")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        BetaBadge()
-                    }
-                },
-                supportingContent = {
-                    Text("すべての画面とウィジェットを、すりガラス調の半透明デザインにします")
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Filled.BlurOn,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+    val scheme = MaterialTheme.colorScheme
+
+    SettingsGroup {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SettingsIconTile(
+                icon = Icons.Outlined.BlurOn,
+                tint = scheme.primary
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Liquid Glass",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = scheme.onSurface
                     )
-                },
-                trailingContent = {
-                    Switch(
-                        checked = enabled,
-                        onCheckedChange = onEnabledChange
-                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    BetaBadge()
                 }
+                Text(
+                    text = "ナビゲーションと操作部品を、背景になじむガラス表現にします",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Switch(
+                checked = enabled,
+                onCheckedChange = onEnabledChange
             )
-            HorizontalDivider()
-            LiquidGlassPreview(
-                enabled = enabled,
-                modifier = Modifier.padding(16.dp)
-            )
+        }
+
+        Hairline()
+
+        Column(modifier = Modifier.padding(16.dp)) {
+            LiquidGlassDemo(enabled = enabled)
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = if (enabled) {
-                    "Liquid Glass が有効です。テーマの配色はそのままに、背景とパネルがガラス調になります。"
+                    "背景が透けるガラス素材を、ヘッダー・ボタン・フィルターなど操作部品にだけ使います。設定行や本文は読みやすさを優先しています。"
                 } else {
-                    "ベータ機能です。表示が崩れる場合はオフに戻してください。"
+                    "有効にすると、ナビゲーションやボタンが背景の上に浮かぶガラス表現になります。テーマの配色はそのまま使います。"
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                color = scheme.onSurfaceVariant
             )
         }
     }
@@ -604,60 +352,61 @@ private fun BetaBadge() {
     }
 }
 
-/** Liquid Glass のオン / オフで見た目がどう変わるかを示すミニプレビュー。 */
+/**
+ * 実際の写真の上にガラスのピルを置いた、小さな実演用プレビュー。
+ * 装飾用の大きなバナーにはせず、オン / オフの違いだけを示す。
+ */
 @Composable
-private fun LiquidGlassPreview(
-    enabled: Boolean,
-    modifier: Modifier = Modifier
-) {
+private fun LiquidGlassDemo(enabled: Boolean) {
+    val scheme = MaterialTheme.colorScheme
+
     Box(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .height(104.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        Color(0xFFD71920),
-                        Color(0xFF6B211B),
-                        Color(0xFFF5B82E)
+            .height(96.dp)
+            .clip(RoundedCornerShape(18.dp))
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.yamaokaya),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.22f))
                     )
                 )
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
+        )
+        GlassSurface(
             modifier = Modifier
-                .fillMaxWidth(0.86f)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color.White.copy(alpha = if (enabled) 0.16f else 0.92f))
-                .border(
-                    width = 1.dp,
-                    color = Color.White.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(16.dp)
-                )
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .align(Alignment.Center)
+                .padding(horizontal = 22.dp),
+            shape = AppShapes.pill,
+            level = GlassLevel.Regular,
+            tint = if (enabled) null else scheme.surfaceContainerHigh,
+            tintAlpha = 1f,
+            shadowElevation = if (enabled) 6.dp else 2.dp
         ) {
-            Icon(
-                imageVector = Icons.Filled.LocationOn,
-                contentDescription = null,
-                tint = if (enabled) Color.White else Color(0xFFD71920),
-                modifier = Modifier.size(22.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text(
-                    text = "Yamaokaya is Doko?",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (enabled) Color.White else Color(0xFF1A1A1C)
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.LocationOn,
+                    contentDescription = null,
+                    tint = if (enabled) liquidGlassTextAccent() else scheme.onSurface,
+                    modifier = Modifier.size(16.dp)
                 )
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "1.24 km",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (enabled) Color(0xFFF5B82E) else Color(0xFFD71920)
+                    text = "Yamaokaya is 1.24 km",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = scheme.onSurface
                 )
             }
         }
@@ -666,7 +415,7 @@ private fun LiquidGlassPreview(
 
 /**
  * テーマ選択カード。実際に適用される配色をミニプレビューで表示し、
- * 選択中のテーマは枠線とチェックマークで分かるようにする。
+ * 選択中は枠線・チェック・背景の3つで示す（色だけに依存しない）。
  */
 @Composable
 private fun ThemeOption(
@@ -676,27 +425,26 @@ private fun ThemeOption(
     modifier: Modifier = Modifier
 ) {
     val scheme = colorSchemeFor(mode)
-    val shape = MaterialTheme.shapes.large
+    val shape = RoundedCornerShape(16.dp)
+    val current = MaterialTheme.colorScheme
 
     Column(
         modifier = modifier
             .clip(shape)
-            .clickable(onClick = onClick)
+            .background(if (selected) current.primary.copy(alpha = 0.06f) else Color.Transparent)
             .border(
-                width = if (selected) 2.dp else 1.dp,
+                width = if (selected) 1.5.dp else 1.dp,
                 color = if (selected) {
-                    MaterialTheme.colorScheme.primary
+                    current.primary
                 } else {
-                    MaterialTheme.colorScheme.outlineVariant
+                    current.outlineVariant.copy(alpha = 0.55f)
                 },
                 shape = shape
             )
-            .background(
-                if (selected) {
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
-                } else {
-                    Color.Transparent
-                }
+            .selectable(
+                selected = selected,
+                onClick = onClick,
+                role = Role.RadioButton
             )
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -709,21 +457,17 @@ private fun ThemeOption(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = mode.displayName,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = if (selected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                }
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = if (selected) current.primary else current.onSurface
             )
             if (selected) {
-                Spacer(modifier = Modifier.width(2.dp))
+                Spacer(modifier = Modifier.width(3.dp))
                 Icon(
                     imageVector = Icons.Filled.Check,
                     contentDescription = "選択中",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(14.dp)
+                    tint = current.primary,
+                    modifier = Modifier.size(13.dp)
                 )
             }
         }
@@ -738,15 +482,15 @@ private fun ThemePreview(
 ) {
     Column(
         modifier = modifier
-            .clip(MaterialTheme.shapes.medium)
+            .clip(RoundedCornerShape(10.dp))
             .background(scheme.background)
-            .border(1.dp, scheme.outlineVariant, MaterialTheme.shapes.medium)
-            .padding(6.dp)
+            .border(1.dp, scheme.outlineVariant.copy(alpha = 0.7f), RoundedCornerShape(10.dp))
+            .padding(7.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
-                    .size(10.dp)
+                    .size(9.dp)
                     .clip(CircleShape)
                     .background(scheme.primary)
             )
@@ -756,39 +500,39 @@ private fun ThemePreview(
                     .height(5.dp)
                     .fillMaxWidth()
                     .clip(CircleShape)
-                    .background(scheme.onSurface.copy(alpha = 0.75f))
+                    .background(scheme.onSurface.copy(alpha = 0.72f))
             )
         }
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(7.dp))
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(6.dp))
+                .clip(RoundedCornerShape(7.dp))
                 .background(scheme.surfaceContainerHigh)
-                .padding(5.dp)
+                .padding(6.dp)
         ) {
             Box(
                 modifier = Modifier
                     .height(4.dp)
-                    .fillMaxWidth(0.85f)
+                    .fillMaxWidth(0.86f)
                     .clip(CircleShape)
-                    .background(scheme.onSurface.copy(alpha = 0.8f))
+                    .background(scheme.onSurface.copy(alpha = 0.78f))
             )
             Spacer(modifier = Modifier.height(4.dp))
             Box(
                 modifier = Modifier
                     .height(4.dp)
-                    .fillMaxWidth(0.55f)
+                    .fillMaxWidth(0.56f)
                     .clip(CircleShape)
-                    .background(scheme.onSurfaceVariant.copy(alpha = 0.8f))
+                    .background(scheme.onSurfaceVariant.copy(alpha = 0.78f))
             )
         }
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(7.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
                     .height(10.dp)
-                    .fillMaxWidth(0.6f)
+                    .fillMaxWidth(0.62f)
                     .clip(RoundedCornerShape(5.dp))
                     .background(scheme.primary)
             )
@@ -800,5 +544,227 @@ private fun ThemePreview(
                     .background(scheme.secondary)
             )
         }
+    }
+}
+
+/* -------------------------------------------------------------------------
+ * Location / notifications
+ * ---------------------------------------------------------------------- */
+
+@Composable
+private fun LocationSection(
+    intervalSeconds: Int,
+    onIntervalChange: (Int) -> Unit,
+    onOpenSystemSettings: () -> Unit
+) {
+    SettingsGroup {
+        SettingsRow(
+            title = "位置情報の権限",
+            subtitle = "OSの設定から変更できます",
+            icon = Icons.Outlined.LocationOn,
+            iconTint = MaterialTheme.colorScheme.primary,
+            onClick = onOpenSystemSettings,
+            trailing = { OpenAffordance(text = "開く") }
+        )
+        Hairline()
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "位置情報の更新間隔",
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = "近づいたときの距離を更新する頻度です。短くすると電池を多く使います。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SettingsRepository.LOCATION_UPDATE_INTERVAL_OPTIONS.forEach { seconds ->
+                    FilterPill(
+                        label = "${seconds}秒",
+                        selected = intervalSeconds == seconds,
+                        onClick = { onIntervalChange(seconds) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotificationSection(
+    proximityEnabled: Boolean,
+    onProximityChange: (Boolean) -> Unit,
+    trackerEnabled: Boolean,
+    onTrackerChange: (Boolean) -> Unit
+) {
+    SettingsGroup {
+        SettingsRow(
+            title = "接近通知",
+            subtitle = "山岡家の 50m 以内に入ると通知します",
+            icon = Icons.Outlined.Notifications,
+            iconTint = MaterialTheme.colorScheme.primary,
+            trailing = {
+                Switch(
+                    checked = proximityEnabled,
+                    onCheckedChange = onProximityChange
+                )
+            }
+        )
+        Hairline()
+        SettingsRow(
+            title = "常時通知（距離トラッカー）",
+            subtitle = "通知バーに最寄り店舗の距離を表示します",
+            icon = Icons.Outlined.Notifications,
+            iconTint = MaterialTheme.colorScheme.secondary,
+            trailing = {
+                Switch(
+                    checked = trackerEnabled,
+                    onCheckedChange = onTrackerChange
+                )
+            }
+        )
+    }
+}
+
+/* -------------------------------------------------------------------------
+ * Update / app info / links
+ * ---------------------------------------------------------------------- */
+
+@Composable
+private fun UpdateSection(
+    state: UpdateFlowState,
+    onCheckUpdate: () -> Unit
+) {
+    SettingsGroup {
+        SettingsRow(
+            title = "最新版を確認",
+            subtitle = "GitHub Releases から APK を取得します",
+            icon = Icons.Outlined.Download,
+            iconTint = MaterialTheme.colorScheme.primary,
+            trailing = {
+                when (state) {
+                    is UpdateFlowState.Checking -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
+                    else -> {
+                        GlassPillButton(
+                            text = "確認",
+                            onClick = onCheckUpdate,
+                            compact = true,
+                            icon = Icons.Outlined.Download
+                        )
+                    }
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun AppInfoSection(context: android.content.Context) {
+    val uriHandler = LocalUriHandler.current
+    SettingsGroup {
+        SettingsRow(
+            title = "バージョン",
+            trailing = {
+                Text(
+                    text = getAppVersionName(context).removePrefix("V."),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        )
+        Hairline()
+        SettingsRow(
+            title = "登録店舗数",
+            trailing = {
+                Text(
+                    text = "${YamaokayaFinder.getRegisteredShops().size} 店舗",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        )
+        Hairline()
+        SettingsRow(
+            title = "GitHub リポジトリ",
+            subtitle = "ソースコードとリリース",
+            icon = Icons.Outlined.Code,
+            iconTint = MaterialTheme.colorScheme.primary,
+            onClick = { uriHandler.openUri("https://github.com/koba9813/yamaokaya") },
+            trailing = { OpenAffordance() }
+        )
+    }
+}
+
+@Composable
+private fun DeveloperSection(onOpenDeveloper: () -> Unit) {
+    SettingsGroup {
+        SettingsRow(
+            title = "koba9813",
+            subtitle = "GitHub @koba9813",
+            icon = Icons.Outlined.Person,
+            iconTint = MaterialTheme.colorScheme.primary,
+            onClick = onOpenDeveloper,
+            trailing = { OpenAffordance() }
+        )
+        Hairline()
+        SettingsRow(
+            title = "Special Thanks",
+            subtitle = "Photo by Sagara",
+            icon = Icons.Outlined.Star,
+            iconTint = MaterialTheme.colorScheme.tertiary
+        )
+    }
+}
+
+@Composable
+private fun FeedbackSection(
+    onOpenIssue: () -> Unit,
+    onSendEmail: () -> Unit
+) {
+    SettingsGroup {
+        SettingsRow(
+            title = "GitHub Issue を作成",
+            subtitle = "バグ報告や機能リクエストはこちらへ",
+            icon = Icons.Outlined.Info,
+            iconTint = MaterialTheme.colorScheme.secondary,
+            onClick = onOpenIssue,
+            trailing = { OpenAffordance() }
+        )
+        Hairline()
+        SettingsRow(
+            title = "メールで送る",
+            subtitle = "Yamaokaya is Doko - 意見・要望",
+            icon = Icons.Outlined.Email,
+            iconTint = MaterialTheme.colorScheme.tertiary,
+            onClick = onSendEmail,
+            trailing = { OpenAffordance() }
+        )
+    }
+}
+
+@Composable
+private fun OpenAffordance(text: String? = null) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (text != null) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(2.dp))
+        }
+        Icon(
+            imageVector = Icons.Outlined.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            modifier = Modifier.size(18.dp)
+        )
     }
 }
