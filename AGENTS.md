@@ -7,7 +7,7 @@
 - リポジトリ: `https://github.com/koba9813/yamaokaya`
 - ブランチ: `main`
 - パッケージ名: `win.haya.doko`
-- 現在のバージョン: `V.beta3.2.1`（`app/build.gradle.kts` の `versionName`、`versionCode = 6`）
+- 現在のバージョン: `V.beta3.1.1`（`app/build.gradle.kts` の `versionName`、`versionCode = 7`）
 
 ## 技術スタック
 
@@ -22,14 +22,17 @@
 
 ### 直近のコミット
 
-1. `6fa34f2` V.beta3.2.1 に更新（versionCode 6）
-2. `05526be` Liquid Glassのスクリーンショットテストを拡充
-3. `01beeea` 設定・情報・バックアップUIを新デザインに刷新
-4. `5fd70cd` ギャラリー画面を新デザインに刷新
-5. `8800487` スタンプラリー画面を新デザインに刷新
-6. `af98a9f` メイン画面を新デザインに刷新
-7. `90d383b` Liquid Glassのデザイン基盤を刷新
-8. `ded43ec` アップデートダイアログのガラス縁取りを強化
+1. `e15d9f0` V.beta3.1 に更新（versionCode 4）
+2. `93adc9b` アップデート確認ダイアログを刷新 → その後のコミット群（`688a2e5` 〜 `a653884`）で Liquid Glass（ベータ）・新デザイン・ウィジェットのバリエーションを追加し、V.beta3.2 / V.beta3.2.1 としてリリース
+3. `a14518a` Liquid Glass関連のUI/UXをV.beta3.1の状態に戻す（ウィジェットのバリエーションは維持）
+4. `d1dbfbe` V.beta3.1.1 に更新（versionCode 7）
+
+### 取り下げ: Liquid Glass（ベータ）
+
+- V.beta3.2 / V.beta3.2.1 で追加した Liquid Glass と新デザインシステムは取り下げました（GitHub Release・タグも削除済み）
+- 各画面とアップデートダイアログは V.beta3.1 のデザインに戻っています。ウィジェットのバリエーション（3 種類）のみ維持し、V.beta3.1.1 としてリリース
+- ウィジェットはガラス描画を廃止して通常スタイルに固定（Liquid Glass 設定自体が削除されたため）
+- V.beta3.2 / V.beta3.2.1 から V.beta3.1.1 へは、アプリ内アップデートでは案内されません（versionName の数値比較のため、手動で APK をインストールする必要がある）
 
 ### 実装済み: テーマ切り替え
 
@@ -47,6 +50,16 @@
 - ギャラリーは Coil + 店舗名検索 / 店舗フィルタ / 複数選択と一括削除 / ピンチズーム表示
 - カメラ画面と写真ビューアは意図的に黒背景（メディア表示のためテーマ非依存）
 
+### 実装済み: ウィジェットのバリエーション
+
+- 標準（4×2 ベース、サイズに応じて small / wide / tall を自動切替）— `YamaokayaWidgetProvider`
+- コンパクト（4×1、店舗名 + 距離を 1 行表示）— `YamaokayaCompactWidgetProvider`
+- ミニマル（2×2、距離を大きく表示）— `YamaokayaMinimalWidgetProvider`
+- 更新処理は `WidgetUpdater`（`YamaokayaWidgetProvider.kt` 内）に共通化。`updateAllWidgets` は 3 種類すべてを更新する
+- 新レイアウト: `widget_yamaokaya_compact.xml` / `widget_yamaokaya_minimal.xml`（`previewLayout` でウィジェットピッカーにプレビュー表示、Android 12+）
+- ウィジェットピッカーの表示名: 標準（サイズで変化）/ コンパクト / ミニマル
+- 配色はテーマ非連動のライト固定
+
 ### 実装済み: データの引き継ぎ（バックアップ）
 
 - 写真・スタンプラリー・設定を 1 つの ZIP（`manifest.json` / `stamps.json` / `settings.json` / `photos.json` / `photos/*.webp`）にまとめ、SAF（Storage Access Framework）の `CreateDocument` / `OpenDocument` で保存・復元
@@ -62,7 +75,7 @@
 - パストラバーサル対策：エントリー ID に `/` や `..` を含むものは読み込まない
 - ZIP 爆弾対策：JSON 8 MB / 写真 1 枚 32 MB / 合計展開 1 GB の上限
 - 写真情報が欠けたバックアップ（`photos.json` にない写真ファイル、または `manifest.json` の `photoCount` と実数が不一致）は、データを触る前にエラーとして弾く
-- 単体テスト 13 件追加（バックアップ関連）
+- 単体テスト 13 件追加（合計 42 件、全件成功）
 - 関連ファイル:
   - `app/src/main/java/win/haya/doko/BackupManager.kt` — 書き出し／読み込みの核心ロジック
   - `app/src/main/java/win/haya/doko/BackupSection.kt` — 設定画面の UI と SAF 連携
@@ -71,39 +84,6 @@
   - `app/src/main/java/win/haya/doko/SettingsRepository.kt` — `normalizeLocationUpdateInterval`
   - `app/src/main/res/xml/file_paths.xml` — FileProvider を用途別サブフォルダーに限定
   - `app/src/test/java/win/haya/doko/BackupManagerTest.kt` — 13 件のユニットテスト
-
-### 実装済み: ウィジェットのバリエーション
-
-- 標準（4×2 ベース、サイズに応じて small / wide / tall を自動切替）— `YamaokayaWidgetProvider`
-- コンパクト（4×1、店舗名 + 距離を 1 行表示）— `YamaokayaCompactWidgetProvider`
-- ミニマル（2×2、距離を大きく表示）— `YamaokayaMinimalWidgetProvider`
-- 更新処理は `WidgetUpdater`（`YamaokayaWidgetProvider.kt` 内）に共通化。`updateAllWidgets` は 3 種類すべてを更新する
-- 新レイアウト: `widget_yamaokaya_compact.xml` / `widget_yamaokaya_minimal.xml`（`previewLayout` でウィジェットピッカーにプレビュー表示、Android 12+）
-- ウィジェットピッカーの表示名: 標準（サイズで変化）/ コンパクト / ミニマル
-
-### 実装済み: Liquid Glass（ベータ）+ 新デザインシステム
-
-iOS 26 の Liquid Glass を意識した「透明感のある素材」を、Android / Compose 上で近似実装したもの。
-
-- 設定「Liquid Glass（ベータ）」をオンにすると、ナビゲーションと操作部品が背景に浮かぶガラス表現になる（既定はオフ、`app_settings` / `liquid_glass`）
-- ガラスはヘッダー・戻るボタン・ピルボタン・フィルター・検索欄などの操作部品に限定。設定行やリストの本文は読みやすさ優先で不透明に近い面を使う
-- `DesignSystem.kt` に共通デザインシステムを集約
-  - `AppSpacing` / `AppShapes` / `GlassLevel` などのトークン
-  - `GlassSurface`（半透明グラデーション + 1dp の光沢輪郭 + 柔らかい影 + 上端ハイライト）
-  - `GlassIconButton` / `GlassPillButton` / `FilterPill` / `GlassSearchField` / `GlassTopBar`
-  - `SettingsGroup` / `SettingsRow` / `Hairline`（設定・情報画面のグループ）
-  - `ScreenEnter` / `pressFeedback` / `LocalReduceMotion`（OS の「アニメーションを減らす」に追従）
-- アプリ側は `LiquidGlass.kt` に集約
-  - `liquidGlassColorScheme()` がサーフェス系トークンを半透明化（`background` は透明）
-  - `LiquidGlassBackdrop()` は黒に近いニュートラルな下地に、淡い赤・金・ブラウンの光を**静的に**重ねるだけ（旧来の常時アニメーションは廃止、全面の赤黒グラデーションも廃止）
-  - `LocalLiquidGlass`（`LiquidGlassStyle`）と `liquidGlassTextAccent()` / `Modifier.liquidGlassBorder()` で、ガラス上でも読めるアクセント色と輪郭を提供
-- `YamaokayaTheme(themeMode, liquidGlassEnabled)` がガラス用スキーム・背景・既定のコンテンツ色（`LocalContentColor`）を適用。`MainActivity` が設定値を渡す
-- メイン / スタンプラリー / ギャラリー / 設定 / 情報 / バックアップ画面を `DesignSystem.kt` の部品で統一（大きな距離表示、2×2 のガラスアクション、進捗パネル、3 列グリッド、Apple 設定風のグループ構成など）
-- ウィジェットは RemoteViews のためブラーは不可。`widget_background_glass.xml`（半透明ダーク + 上端ハイライト + 白枠）と白 / 金の文字色に差し替え（`WidgetUpdater.applyStyle`）
-- 設定変更時は `YamaokayaViewModel.updateSettings` が `updateAllWidgets` を呼び、ウィジェットも即座に切り替わる
-- バックアップ（`settings.json`）にも `liquidGlass` を保存。古いバックアップに無い場合はオフとして扱う
-- 見た目の確認: `LiquidGlassScreenshotTest` / `WidgetScreenshotTest` が `app/build/screenshots/` に PNG を出力
-- 既知の制約: カメラ画面と写真ビューアはメディア表示のため黒背景のまま（テーマ非依存）。実際の backdrop blur は使わず半透明 + 輪郭の近似
 
 ### 実装済み: アプリ内アップデート
 
@@ -114,9 +94,6 @@ GitHub Releases から最新 APK を自動確認し、アプリ内でダウン�
 - 新しいバージョンがある場合、ダイアログでリリースノートを表示し、「ダウンロードしてインストール」で APK を取得・インストール
 - 必要に応じて「不明なアプリのインストール」権限設定画面を開く
 - APK ダウンロードに HTTP ステータスとサイズの検証を追加（途中で切れたダウンロードを検出）
-- ダイアログは AlertDialog ではなく、角丸サーフェス + グラデーションのアイコンバッジ + バージョン比較チップ + リリースノートカード（下端フェード付き）のカスタム UI
-  - ダウンロード中は円形プログレス + パーセント表示
-  - テーマ（ダーク / ライト / 山岡家）に追従
 
 関連ファイル:
 - `app/src/main/java/win/haya/doko/UpdateChecker.kt`
@@ -148,17 +125,14 @@ GitHub Releases から最新 APK を自動確認し、アプリ内でダウン�
 
 - `MainActivity.kt` — エントリポイント、SplashScreen、テーマ適用
 - `AppTheme.kt` — `ThemeMode` ごとのカラースキーム、タイポグラフィ、`YamaokayaTheme`
-- `DesignSystem.kt` — 共通デザインシステム（間隔・シェイプ・ガラス部品・設定グループ・画面遷移アニメーション）
 - `ThemeMode.kt` — テーマ定義（ダーク / ライト / 山岡家）と保存キー
 - `Color.kt` — 各テーマのカラートークン
 - `YamaokayaScreen.kt` — メイン画面、位置情報取得、各種画面遷移、アップデート自動チェック
 - `YamaokayaViewModel.kt` — 位置情報・方位・設定の ViewModel
 - `YamaokayaFinder.kt` — 店舗データ（198店舗）と最寄り店舗計算
-- `SettingsPage.kt` / `SettingsRepository.kt` — 設定画面（テーマ・Liquid Glass・通知・アップデート）と `AppSettings` の永続化
-- `LiquidGlass.kt` — Liquid Glass のカラースキーム・静的な背景光・ガラス用アクセント色
+- `SettingsPage.kt` / `SettingsRepository.kt` — 設定画面（テーマ・通知・アップデート）と `AppSettings` の永続化
 - `StampRallyScreen.kt` / `StampRepository.kt` — スタンプラリー機能
 - `GalleryScreen.kt` / `PhotoRepository.kt` — 訪問写真ギャラリー
-- `InformationPage.kt` / `BackupSection.kt` — 情報画面とバックアップ UI（`DesignSystem.kt` の部品を利用）
 - `CameraScreen.kt` — CameraX によるアプリ内カメラ
 - `UpdateChecker.kt` — GitHub Releases API 経由で最新 APK を確認・ダウンロード・インストール
 - `UpdateFlow.kt` — アップデートダイアログとインストールフローの共通化 UI
@@ -168,12 +142,7 @@ GitHub Releases から最新 APK を自動確認し、アプリ内でダウン�
 ### テスト
 
 - `app/src/test/java/win/haya/doko/` — Robolectric ベースのユニットテスト（`YamaokayaFinderTest` / `StampRepositoryTest` / `SettingsRepositoryTest` / `LocationUtilsTest` / `BackupManagerTest`）
-- `UpdateFlowScreenshotTest` — アップデート関連ダイアログを Robolectric + Compose で描画し、`app/build/screenshots/*.png` に出力する見た目確認用テスト（`@GraphicsMode(NATIVE)` + `unitTests.isIncludeAndroidResources = true` が必要）
-  - `captureToImage()` は Robolectric のダイアログ窓では再描画待ちでタイムアウトするため、`ShadowDialog.getLatestDialog()` の DecorView を直接ビットマップへ描画している
-- `LiquidGlassScreenshotTest` — Liquid Glass 適用時の設定画面（3テーマ + ガラス無効の比較）・メイン画面・スタンプラリー・ギャラリー（テスト用に写真を保存）・情報・アップデートダイアログを PNG 出力
-  - ダイアログは別ウィンドウのため、アクティビティの DecorView に重ねて描画している
-  - ギャラリーは Coil の非同期読み込みを短時間待ってから描画する
-- `WidgetScreenshotTest` — ウィジェット各レイアウト（標準 / コンパクト / ミニマル × 通常 / ガラス）を `RemoteViews.apply()` で描画して PNG 出力
+- `WidgetScreenshotTest` — ウィジェット各レイアウト（標準 / コンパクト / ミニマル）を `RemoteViews.apply()` で描画して PNG 出力（`@GraphicsMode(NATIVE)` + `unitTests.isIncludeAndroidResources = true` が必要）
 
 ### Web
 
@@ -189,15 +158,15 @@ GitHub Releases から最新 APK を自動確認し、アプリ内でダウン�
 - 実際の値はリポジトリ外の `C:\Users\user\.yamaokaya\keystore.properties` に保存済み（keystore: `release.keystore`、alias: `yamaokaya`）
 - `.gitignore` で `*.jks`, `*.crt`, `app/release/` は無視されています
 
-### リリース手順（例: V.beta3.2）
+### リリース手順（例: V.beta3.1.1）
 
-1. `app/build.gradle.kts` の `versionCode` / `versionName` を更新（`V.beta3.2` / `5`）
+1. `app/build.gradle.kts` の `versionCode` / `versionName` を更新（`V.beta3.1.1` / `7`）
 2. 署名用の環境変数を設定して `:app:assembleRelease` を実行（出力: `app/build/outputs/apk/release/app-release.apk`）
-3. GitHub Release を作成（タグ `V.beta3.2`、アセット名 `Yamaokaya_beta3.2.apk`）
+3. GitHub Release を作成（タグ `V.beta3.1.1`、アセット名 `Yamaokaya_beta3.1.1.apk`）
 4. **必ず通常リリースとして公開する**（prerelease / draft は `/releases/latest` から見えず、アプリ内アップデートが反応しない）
 5. アプリ内アップデートが動くのは、公開 APK がインストール済みアプリと同じ鍵で署名されている場合のみ（旧鍵の V.beta2.0 以前からは更新不可）
 
-- 過去のリリース命名: V.beta1.0 Syoyu / V.beta1.1 Miso / V.beta1.2 Shio / V.beta2.0 Karamiso / V.beta3.0 Tokusei Miso / V.beta3.1 / V.beta3.2 / V.beta3.2.1
+- 過去のリリース命名: V.beta1.0 Syoyu / V.beta1.1 Miso / V.beta1.2 Shio / V.beta2.0 Karamiso / V.beta3.0 Tokusei Miso / V.beta3.1 / V.beta3.1.1（V.beta3.2 / V.beta3.2.1 は取り下げ済み）
 - `gh` CLI は未インストール。GitHub API を叩く場合は Windows 資格情報マネージャーのトークンを使用（`"protocol=https\`nhost=github.com\`n" | git credential fill`）
 
 ## 既知の課題・次のステップ候補
@@ -209,14 +178,12 @@ GitHub Releases から最新 APK を自動確認し、アプリ内でダウン�
 - [x] バックアップ読み込みの堅牢化（パストラバーサル拒否、サイズ上限、値の検証、置き換え時の原子的入れ替え）
 - [x] V.beta3.1 としてリリース（versionCode 4、同一署名）
 - [x] ウィジェットのバリエーション追加（コンパクト / ミニマル）
-- [x] Liquid Glass（ベータ）の実装（全画面 + ウィジェット、設定から切替）
-- [x] Liquid Glass デザインの刷新（常時アニメーション廃止、DesignSystem で 4 画面を統一、ギャラリーのスクリーンショット追加、全ユニットテスト緑）
-- [ ] 実機での新デザイン確認（メイン / スタンプラリー / ギャラリー / 設定 × 3テーマ × Liquid Glass オン/オフ）
-- [ ] ガラスの半透明表現の実機での透過感・負荷確認（backdrop blur は未使用、静的な光のみ）
+- [x] V.beta3.2 / V.beta3.2.1（Liquid Glass・新デザイン）の取り下げと V.beta3.1.1 への収束
+- [ ] ウィジェット 3 種類の実機確認（配置・サイズ変化・更新）
 - [ ] 「このバージョンをスキップ」機能の追加（毎回ダイアログが出るのを防ぐ）
 - [ ] 最終アップデート確認日時の保存（起動ごとに API を叩きすぎないように）
 - [ ] 山岡家テーマの見出し赤色のコントラスト改善（必要なら `primaryLight` / `primaryYamaokaya` を明るめに調整）
-- [ ] ホーム画面ウィジェットの配色をテーマに追従させるか検討（現在は通常 = ライト固定 / Liquid Glass = ダークガラス固定）
+- [ ] ホーム画面ウィジェットをテーマ配色に追従させるか検討
 - [ ] Web 側と Android 側のバージョン管理・リリースフローの整理
 - [ ] バックアップ機能の実機動作確認（書き出し・読み込み・共有・置き換えの一連の流れ）
 
