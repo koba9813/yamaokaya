@@ -6,15 +6,18 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,28 +33,22 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -63,12 +60,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -93,7 +92,7 @@ private data class PhotoSection(
 private val headerDateFormat = SimpleDateFormat("yyyy年M月d日 EEEE", Locale.JAPAN)
 private val sameYearDateFormat = SimpleDateFormat("M月d日 EEEE", Locale.JAPAN)
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun GalleryScreen(
     photoRepository: PhotoRepository,
@@ -182,8 +181,6 @@ internal fun GalleryScreen(
                         }
                         selected.value = emptySet()
                         selectionMode = false
-                    } else {
-                        // single delete handled in viewer; here for safety
                     }
                     refreshKey++
                     showDeleteConfirm = false
@@ -196,152 +193,116 @@ internal fun GalleryScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    if (selectionMode) {
-                        Text(
-                            text = "${selected.value.size}枚選択中",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                    } else {
-                        Text(
-                            text = "ギャラリー",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = {
+    ScreenEnter(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            containerColor = screenContainerColor(),
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            topBar = {
+                GlassTopBar(
+                    title = if (selectionMode) "${selected.value.size}枚選択中" else "ギャラリー",
+                    onBack = {
                         if (selectionMode) {
                             selectionMode = false
                             selected.value = emptySet()
                         } else {
                             onClose()
                         }
-                    }) {
-                        Icon(
-                            imageVector = if (selectionMode) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "閉じる"
-                        )
-                    }
-                },
-                actions = {
-                    if (selectionMode) {
-                        IconButton(
-                            onClick = {
-                                if (selected.value.isNotEmpty()) {
-                                    pendingDeleteAll = true
-                                    showDeleteConfirm = true
-                                }
-                            }
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = "削除", tint = MaterialTheme.colorScheme.error)
-                        }
-                    } else {
-                        // sort chips
-                        GallerySort.entries.forEach { sort ->
-                            FilterChip(
-                                selected = sortBy == sort,
-                                onClick = { sortBy = sort },
-                                label = { Text(sort.label) },
-                                modifier = Modifier.padding(end = if (sort == GallerySort.SHOP) 8.dp else 4.dp)
-                            )
-                        }
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            // Search + filter row
-            if (!selectionMode) {
-                Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("店舗名で検索") },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                        singleLine = true
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FilterChip(
-                            selected = selectedShop == null,
-                            onClick = { selectedShop = null },
-                            label = { Text("すべて") }
-                        )
-                        // show up to a few shop chips
-                        shopNames.take(6).forEach { shop ->
-                            FilterChip(
-                                selected = selectedShop == shop,
-                                onClick = { selectedShop = if (selectedShop == shop) null else shop },
-                                label = { Text(shop, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (filteredPhotos.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (allPhotos.isEmpty()) "まだ写真がありません\n店舗で撮影するとここに表示されます"
-                        else "条件に一致する写真がありません",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                }
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    sections.forEach { section ->
-                        item(
-                            key = "header_${section.dateLabel}",
-                            span = { GridItemSpan(maxLineSpan) }
-                        ) {
-                            DateHeader(label = section.dateLabel)
-                        }
-                        items(
-                            items = section.entries,
-                            key = { it.file.absolutePath }
-                        ) { entry ->
-                            val index = filteredPhotos.indexOf(entry)
-                            GalleryThumbnail(
-                                entry = entry,
-                                isSelected = selected.value.contains(entry.file.absolutePath),
-                                selectionMode = selectionMode,
+                    },
+                    actions = {
+                        if (selectionMode) {
+                            GlassIconButton(
+                                icon = Icons.Outlined.Delete,
+                                contentDescription = "選択した写真を削除",
                                 onClick = {
-                                    if (selectionMode) {
-                                        val set = selected.value.toMutableSet()
-                                        if (set.contains(entry.file.absolutePath)) set.remove(entry.file.absolutePath)
-                                        else set.add(entry.file.absolutePath)
-                                        selected.value = set
-                                    } else {
-                                        selectedIndex = index
+                                    if (selected.value.isNotEmpty()) {
+                                        pendingDeleteAll = true
+                                        showDeleteConfirm = true
                                     }
                                 },
-                                onLongClick = {
-                                    selectionMode = true
-                                    selected.value = setOf(entry.file.absolutePath)
-                                }
+                                tint = MaterialTheme.colorScheme.error
                             )
+                        }
+                    }
+                )
+            }
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .navigationBarsPadding()
+            ) {
+                if (!selectionMode) {
+                    GalleryFilters(
+                        searchQuery = searchQuery,
+                        onSearchQueryChange = { searchQuery = it },
+                        sortBy = sortBy,
+                        onSortChange = { sortBy = it },
+                        selectedShop = selectedShop,
+                        onShopSelected = { selectedShop = it },
+                        shopNames = shopNames,
+                        resultCount = filteredPhotos.size
+                    )
+                }
+
+                if (filteredPhotos.isEmpty()) {
+                    EmptyGallery(
+                        allPhotosEmpty = allPhotos.isEmpty(),
+                        hasActiveFilter = searchQuery.isNotBlank() || selectedShop != null,
+                        searchQuery = searchQuery,
+                        onClearFilters = {
+                            searchQuery = ""
+                            selectedShop = null
+                        }
+                    )
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(3),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = 20.dp,
+                            end = 20.dp,
+                            top = if (selectionMode) 12.dp else 4.dp,
+                            bottom = 24.dp
+                        ),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        sections.forEach { section ->
+                            item(
+                                key = "header_${section.dateLabel}",
+                                span = { GridItemSpan(maxLineSpan) }
+                            ) {
+                                DateHeader(label = section.dateLabel)
+                            }
+                            items(
+                                items = section.entries,
+                                key = { it.file.absolutePath }
+                            ) { entry ->
+                                val index = filteredPhotos.indexOf(entry)
+                                GalleryThumbnail(
+                                    entry = entry,
+                                    isSelected = selected.value.contains(entry.file.absolutePath),
+                                    selectionMode = selectionMode,
+                                    onClick = {
+                                        if (selectionMode) {
+                                            val set = selected.value.toMutableSet()
+                                            if (set.contains(entry.file.absolutePath)) {
+                                                set.remove(entry.file.absolutePath)
+                                            } else {
+                                                set.add(entry.file.absolutePath)
+                                            }
+                                            selected.value = set
+                                        } else {
+                                            selectedIndex = index
+                                        }
+                                    },
+                                    onLongClick = {
+                                        selectionMode = true
+                                        selected.value = setOf(entry.file.absolutePath)
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -351,16 +312,142 @@ internal fun GalleryScreen(
 }
 
 @Composable
+private fun GalleryFilters(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    sortBy: GallerySort,
+    onSortChange: (GallerySort) -> Unit,
+    selectedShop: String?,
+    onShopSelected: (String?) -> Unit,
+    shopNames: List<String>,
+    resultCount: Int
+) {
+    Column(
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+    ) {
+        GlassSearchField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            placeholder = "店舗名で検索"
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                GallerySort.entries.forEach { sort ->
+                    FilterPill(
+                        label = sort.label,
+                        selected = sortBy == sort,
+                        onClick = { onSortChange(sort) }
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "$resultCount 枚",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (shopNames.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterPill(
+                    label = "すべて",
+                    selected = selectedShop == null,
+                    onClick = { onShopSelected(null) }
+                )
+                shopNames.take(6).forEach { shop ->
+                    FilterPill(
+                        label = shop,
+                        selected = selectedShop == shop,
+                        onClick = {
+                            onShopSelected(if (selectedShop == shop) null else shop)
+                        }
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+    }
+}
+
+@Composable
+private fun EmptyGallery(
+    allPhotosEmpty: Boolean,
+    hasActiveFilter: Boolean,
+    searchQuery: String,
+    onClearFilters: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            GlassSurface(
+                modifier = Modifier.size(78.dp),
+                shape = CircleShape,
+                level = GlassLevel.Thin,
+                shadowElevation = 2.dp
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.PhotoLibrary,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(18.dp))
+            Text(
+                text = if (allPhotosEmpty) "まだ写真がありません" else "条件に一致する写真がありません",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = when {
+                    allPhotosEmpty -> "店舗で撮影した写真が、ここに日付ごとに並びます。"
+                    searchQuery.isNotBlank() -> "「$searchQuery」に一致する写真は見つかりませんでした。"
+                    else -> "店舗のフィルターを変えると、他の写真が見つかるかもしれません。"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+            if (hasActiveFilter) {
+                Spacer(modifier = Modifier.height(18.dp))
+                GlassPillButton(
+                    text = "検索条件をクリア",
+                    onClick = onClearFilters,
+                    compact = true
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun DateHeader(label: String) {
     Text(
         text = label,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface,
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 12.dp, vertical = 12.dp)
+            .padding(start = 4.dp, top = 16.dp, bottom = 6.dp)
     )
 }
 
@@ -377,12 +464,12 @@ private fun GalleryThumbnail(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
+            .clip(RoundedCornerShape(10.dp))
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
             )
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-        contentAlignment = Alignment.Center
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
     ) {
         AsyncImage(
             model = entry.file,
@@ -391,27 +478,17 @@ private fun GalleryThumbnail(
             modifier = Modifier.fillMaxSize()
         )
 
-        // selection overlay
-        if (selectionMode) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(if (isSelected) Color.Black.copy(alpha = 0.4f) else Color.Transparent)
-            )
-            if (isSelected) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = "選択中",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(6.dp)
-                        .size(24.dp)
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .fillMaxWidth()
+                .height(30.dp)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.46f))
+                    )
                 )
-            }
-        }
-
-        // shop name chip at bottom
+        )
         Text(
             text = entry.shopName,
             style = MaterialTheme.typography.labelSmall,
@@ -421,15 +498,47 @@ private fun GalleryThumbnail(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
-                .background(Color.Black.copy(alpha = 0.5f))
-                .padding(horizontal = 4.dp, vertical = 2.dp)
+                .padding(horizontal = 6.dp, vertical = 4.dp)
         )
+
+        if (selectionMode) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(if (isSelected) Color.Black.copy(alpha = 0.30f) else Color.Transparent)
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isSelected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            Color.Black.copy(alpha = 0.30f)
+                        }
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = Color.White.copy(alpha = 0.7f),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = "選択中",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+        }
     }
 }
-
-// long-press handling via Modifier.combinedClickable would be cleaner; add import for combinedClickable
-// We'll instead use Modifier.pointerInput for long press detection below by redefining thumbnail? 
-// To keep simple, use combinedClickable. Let's adjust: use androidx.compose.foundation.combinedClickable
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -449,6 +558,12 @@ private fun PhotoViewerDialog(
     var offsetX by remember { mutableStateOf(0f) }
     var offsetY by remember { mutableStateOf(0f) }
 
+    LaunchedEffect(currentPage) {
+        scale = 1f
+        offsetX = 0f
+        offsetY = 0f
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -460,8 +575,6 @@ private fun PhotoViewerDialog(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)
-                .statusBarsPadding()
-                .navigationBarsPadding()
         ) {
             HorizontalPager(
                 state = pagerState,
@@ -502,64 +615,109 @@ private fun PhotoViewerDialog(
                 }
             }
 
-            Column(modifier = Modifier.fillMaxSize()) {
+            // 上端のスクリムとヘッダー
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Black.copy(alpha = 0.62f), Color.Transparent)
+                        )
+                    )
+            )
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ViewerGlassIconButton(
+                    icon = Icons.Outlined.Close,
+                    contentDescription = "閉じる",
+                    onClick = onDismiss
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                currentEntry?.let { entry ->
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = entry.shopName,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = photoRepository.formatDate(entry),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.78f)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                }
+                Text(
+                    text = "${currentPage + 1}/${allPhotos.size}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.78f)
+                )
+            }
+
+            // 下端のスクリムと操作バー
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.72f))
+                        )
+                    )
+            )
+            currentEntry?.let { entry ->
                 Row(
                     modifier = Modifier
+                        .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .background(Color.Black.copy(alpha = 0.4f))
-                        .padding(horizontal = 4.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                        .navigationBarsPadding()
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                        .clip(RoundedCornerShape(26.dp))
+                        .background(Color.White.copy(alpha = 0.10f))
+                        .border(
+                            width = 1.dp,
+                            color = Color.White.copy(alpha = 0.20f),
+                            shape = RoundedCornerShape(26.dp)
+                        )
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "閉じる", tint = Color.White)
+                    ViewerActionButton(label = "Instagram") { onShare(entry, ShareTarget.INSTAGRAM) }
+                    ViewerActionButton(label = "LINE") { onShare(entry, ShareTarget.LINE) }
+                    ViewerActionButton(label = "X") { onShare(entry, ShareTarget.X) }
+                    IconButton(onClick = { onShare(entry, ShareTarget.OTHER) }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Share,
+                            contentDescription = "その他",
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
-                    currentEntry?.let { entry ->
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            modifier = Modifier.padding(end = 12.dp)
-                        ) {
-                            Text(
-                                text = entry.shopName,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = photoRepository.formatDate(entry),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.8f)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                currentEntry?.let { entry ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color.Black.copy(alpha = 0.5f))
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        ViewerActionButton(label = "Instagram") { onShare(entry, ShareTarget.INSTAGRAM) }
-                        ViewerActionButton(label = "LINE") { onShare(entry, ShareTarget.LINE) }
-                        ViewerActionButton(label = "X") { onShare(entry, ShareTarget.X) }
-                        IconButton(onClick = { onShare(entry, ShareTarget.OTHER) }) {
-                            Icon(Icons.Default.Share, contentDescription = "その他", tint = Color.White, modifier = Modifier.size(28.dp))
-                        }
-                        IconButton(onClick = {
-                            entry.file.delete()
-                            if (allPhotos.size <= 1) onDismiss()
-                            onDeleted()
-                        }) {
-                            Icon(Icons.Default.Delete, contentDescription = "削除", tint = Color.White, modifier = Modifier.size(28.dp))
-                        }
+                    IconButton(onClick = {
+                        entry.file.delete()
+                        if (allPhotos.size <= 1) onDismiss()
+                        onDeleted()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Delete,
+                            contentDescription = "削除",
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                 }
             }
@@ -568,9 +726,38 @@ private fun PhotoViewerDialog(
 }
 
 @Composable
+private fun ViewerGlassIconButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.13f))
+            .border(1.dp, Color.White.copy(alpha = 0.22f), CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = Color.White,
+            modifier = Modifier.size(21.dp)
+        )
+    }
+}
+
+@Composable
 private fun ViewerActionButton(label: String, onClick: () -> Unit) {
     TextButton(onClick = onClick) {
-        Text(text = label, style = MaterialTheme.typography.labelLarge, color = Color.White, fontWeight = FontWeight.Bold)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = Color.White,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 
