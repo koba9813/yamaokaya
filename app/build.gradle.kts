@@ -12,8 +12,8 @@ android {
         applicationId = "win.haya.doko"
         minSdk = 24
         targetSdk = 35
-        versionCode = 6
-        versionName = "V.beta3.2.1"
+        versionCode = 7
+        versionName = "V.beta3.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -78,7 +78,7 @@ android {
 
     testOptions {
         // Robolectric（ユニットテスト）から Android のリソースとマージ済みマニフェストを参照できるようにする。
-        // Compose のスクリーンショット確認（UpdateFlowScreenshotTest）で必要。
+        // Compose のスクリーンショット確認（WidgetScreenshotTest）で必要。
         unitTests.isIncludeAndroidResources = true
     }
 }
@@ -138,7 +138,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
-    // ダイアログのスクリーンショット確認用（UpdateFlowScreenshotTest）
+    // ウィジェットのスクリーンショット確認用（WidgetScreenshotTest）
     testImplementation(platform("androidx.compose:compose-bom:$composeBomVersion"))
     testImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
