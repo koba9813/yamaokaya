@@ -1,6 +1,7 @@
 package win.haya.doko
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.view.View
 import androidx.activity.ComponentActivity
@@ -36,7 +37,20 @@ class LiquidGlassScreenshotTest {
         themeMode = ThemeMode.YAMAOKAYA
     ) {
         SettingsPage(
-            appSettings = AppSettings(liquidGlassEnabled = true),
+            appSettings = AppSettings(themeMode = ThemeMode.YAMAOKAYA, liquidGlassEnabled = true),
+            onSettingsChanged = {},
+            onClose = {}
+        )
+    }
+
+    @Test
+    fun settingsPage_yamaokaya_withoutLiquidGlass() = captureScreen(
+        name = "solid_settings_yamaokaya",
+        themeMode = ThemeMode.YAMAOKAYA,
+        liquidGlassEnabled = false
+    ) {
+        SettingsPage(
+            appSettings = AppSettings(themeMode = ThemeMode.YAMAOKAYA),
             onSettingsChanged = {},
             onClose = {}
         )
@@ -114,6 +128,32 @@ class LiquidGlassScreenshotTest {
     }
 
     @Test
+    fun gallery_yamaokaya_liquidGlass() {
+        val context: android.content.Context = androidx.test.core.app.ApplicationProvider.getApplicationContext()
+        val photoRepository = PhotoRepository(context)
+        val drawables = listOf(
+            R.drawable.miso,
+            R.drawable.shio,
+            R.drawable.kara_miso,
+            R.drawable.tokusei_miso,
+            R.drawable.gyoza,
+            R.drawable.yamaokaya
+        )
+        YamaokayaFinder.getShopNames().take(drawables.size).forEachIndexed { index, shopName ->
+            val bitmap = BitmapFactory.decodeResource(context.resources, drawables[index])
+            photoRepository.savePhoto(shopName, bitmap)
+        }
+
+        captureScreen(
+            name = "liquid_glass_gallery_yamaokaya",
+            themeMode = ThemeMode.YAMAOKAYA,
+            settleMillis = 600
+        ) {
+            GalleryScreen(photoRepository = photoRepository, onClose = {})
+        }
+    }
+
+    @Test
     fun stampRally_yamaokaya_liquidGlass() {
         val context: android.content.Context = androidx.test.core.app.ApplicationProvider.getApplicationContext()
         captureScreen(
@@ -134,14 +174,21 @@ class LiquidGlassScreenshotTest {
     private fun captureScreen(
         name: String,
         themeMode: ThemeMode,
+        liquidGlassEnabled: Boolean = true,
+        settleMillis: Long = 0,
         content: @Composable () -> Unit
     ) {
         composeRule.setContent {
-            YamaokayaTheme(themeMode = themeMode, liquidGlassEnabled = true) {
+            YamaokayaTheme(themeMode = themeMode, liquidGlassEnabled = liquidGlassEnabled) {
                 content()
             }
         }
         composeRule.waitForIdle()
+        if (settleMillis > 0) {
+            // Coil などバックグラウンドでの画像読み込みを待つ
+            Thread.sleep(settleMillis)
+            composeRule.waitForIdle()
+        }
         save(name, drawViews(composeRule.activity.window!!.decorView))
     }
 
