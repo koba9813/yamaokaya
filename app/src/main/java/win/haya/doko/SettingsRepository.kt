@@ -6,7 +6,8 @@ data class AppSettings(
     val proximityNotificationEnabled: Boolean = true,
     val trackerNotificationEnabled: Boolean = true,
     val locationUpdateIntervalSeconds: Int = 10,
-    val themeMode: ThemeMode = ThemeMode.DARK
+    val themeMode: ThemeMode = ThemeMode.DARK,
+    val fontMode: FontMode = FontMode.SMART_FONT_UI
 )
 
 class SettingsRepository(context: Context) {
@@ -20,7 +21,8 @@ class SettingsRepository(context: Context) {
             locationUpdateIntervalSeconds = normalizeLocationUpdateInterval(
                 prefs.getInt("location_update_interval", DEFAULT_LOCATION_INTERVAL_SECONDS)
             ),
-            themeMode = ThemeMode.fromStorageKey(prefs.getString("theme_mode", null))
+            themeMode = ThemeMode.fromStorageKey(prefs.getString("theme_mode", null)),
+            fontMode = FontMode.fromStorageKey(prefs.getString("font_mode", null))
         )
     }
 
@@ -33,6 +35,7 @@ class SettingsRepository(context: Context) {
                 normalizeLocationUpdateInterval(settings.locationUpdateIntervalSeconds)
             )
             .putString("theme_mode", settings.themeMode.storageKey)
+            .putString("font_mode", settings.fontMode.storageKey)
             .apply()
     }
 

@@ -33,6 +33,7 @@ class SettingsRepositoryTest {
         val settings = repository.getSettings()
 
         assertEquals(ThemeMode.DARK, settings.themeMode)
+        assertEquals(FontMode.SMART_FONT_UI, settings.fontMode)
         assertTrue(settings.proximityNotificationEnabled)
         assertTrue(settings.trackerNotificationEnabled)
         assertEquals(10, settings.locationUpdateIntervalSeconds)
@@ -48,13 +49,23 @@ class SettingsRepositoryTest {
     }
 
     @Test
+    fun save_persistsEveryFontMode() {
+        FontMode.entries.forEach { mode ->
+            repository.save(repository.getSettings().copy(fontMode = mode))
+
+            assertEquals(mode, SettingsRepository(context).getSettings().fontMode)
+        }
+    }
+
+    @Test
     fun save_persistsOtherSettingsWithTheme() {
         repository.save(
             AppSettings(
                 proximityNotificationEnabled = false,
                 trackerNotificationEnabled = false,
                 locationUpdateIntervalSeconds = 60,
-                themeMode = ThemeMode.YAMAOKAYA
+                themeMode = ThemeMode.YAMAOKAYA,
+                fontMode = FontMode.SMART_FONT_UI
             )
         )
 
@@ -63,6 +74,7 @@ class SettingsRepositoryTest {
         assertEquals(false, restored.trackerNotificationEnabled)
         assertEquals(60, restored.locationUpdateIntervalSeconds)
         assertEquals(ThemeMode.YAMAOKAYA, restored.themeMode)
+        assertEquals(FontMode.SMART_FONT_UI, restored.fontMode)
     }
 
     @Test
@@ -96,6 +108,25 @@ class SettingsRepositoryTest {
             .commit()
 
         assertEquals(ThemeMode.DARK, SettingsRepository(context).getSettings().themeMode)
+    }
+
+    @Test
+    fun unknownStoredFont_fallsBackToSmartFontUi() {
+        context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+            .edit()
+            .putString("font_mode", "unknown-font")
+            .commit()
+
+        assertEquals(FontMode.SMART_FONT_UI, SettingsRepository(context).getSettings().fontMode)
+    }
+
+    @Test
+    fun fontModeFromStorageKey_resolvesStoredValues() {
+        FontMode.entries.forEach { mode ->
+            assertEquals(mode, FontMode.fromStorageKey(mode.storageKey))
+        }
+        assertEquals(FontMode.SMART_FONT_UI, FontMode.fromStorageKey(null))
+        assertEquals(FontMode.SMART_FONT_UI, FontMode.fromStorageKey(""))
     }
 
     @Test

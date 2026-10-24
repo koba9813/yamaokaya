@@ -22,24 +22,48 @@ internal val zenMaruGothicFont = FontFamily(
     Font(resId = R.font.zen_maru_gothic_bold, weight = FontWeight.Bold)
 )
 
-internal val appTypography = Typography().let { base ->
-    Typography(
-        displayLarge = base.displayLarge.copy(fontFamily = zenMaruGothicFont),
-        displayMedium = base.displayMedium.copy(fontFamily = zenMaruGothicFont),
-        displaySmall = base.displaySmall.copy(fontFamily = zenMaruGothicFont),
-        headlineLarge = base.headlineLarge.copy(fontFamily = zenMaruGothicFont),
-        headlineMedium = base.headlineMedium.copy(fontFamily = zenMaruGothicFont),
-        headlineSmall = base.headlineSmall.copy(fontFamily = zenMaruGothicFont),
-        titleLarge = base.titleLarge.copy(fontFamily = zenMaruGothicFont),
-        titleMedium = base.titleMedium.copy(fontFamily = zenMaruGothicFont),
-        titleSmall = base.titleSmall.copy(fontFamily = zenMaruGothicFont),
-        bodyLarge = base.bodyLarge.copy(fontFamily = zenMaruGothicFont),
-        bodyMedium = base.bodyMedium.copy(fontFamily = zenMaruGothicFont),
-        bodySmall = base.bodySmall.copy(fontFamily = zenMaruGothicFont),
-        labelLarge = base.labelLarge.copy(fontFamily = zenMaruGothicFont),
-        labelMedium = base.labelMedium.copy(fontFamily = zenMaruGothicFont),
-        labelSmall = base.labelSmall.copy(fontFamily = zenMaruGothicFont)
+/**
+ * Smart Font UI は 1 ウェイトのみのため、太字は Compose の合成太字に任せる
+ * （同じファイルを Bold として登録すると太字にならないため）。
+ */
+internal val smartFontUiFont = FontFamily(
+    Font(resId = R.font.smart_font_ui, weight = FontWeight.Normal)
+)
+
+/** フォント切り替えで利用するフォントファミリー。設定画面のプレビューからも参照する。 */
+internal fun fontFamilyFor(fontMode: FontMode): FontFamily = when (fontMode) {
+    FontMode.ZEN_MARU -> zenMaruGothicFont
+    FontMode.SMART_FONT_UI -> smartFontUiFont
+}
+
+private fun typographyWith(fontFamily: FontFamily): Typography {
+    val base = Typography()
+    return Typography(
+        displayLarge = base.displayLarge.copy(fontFamily = fontFamily),
+        displayMedium = base.displayMedium.copy(fontFamily = fontFamily),
+        displaySmall = base.displaySmall.copy(fontFamily = fontFamily),
+        headlineLarge = base.headlineLarge.copy(fontFamily = fontFamily),
+        headlineMedium = base.headlineMedium.copy(fontFamily = fontFamily),
+        headlineSmall = base.headlineSmall.copy(fontFamily = fontFamily),
+        titleLarge = base.titleLarge.copy(fontFamily = fontFamily),
+        titleMedium = base.titleMedium.copy(fontFamily = fontFamily),
+        titleSmall = base.titleSmall.copy(fontFamily = fontFamily),
+        bodyLarge = base.bodyLarge.copy(fontFamily = fontFamily),
+        bodyMedium = base.bodyMedium.copy(fontFamily = fontFamily),
+        bodySmall = base.bodySmall.copy(fontFamily = fontFamily),
+        labelLarge = base.labelLarge.copy(fontFamily = fontFamily),
+        labelMedium = base.labelMedium.copy(fontFamily = fontFamily),
+        labelSmall = base.labelSmall.copy(fontFamily = fontFamily)
     )
+}
+
+private val zenMaruGothicTypography = typographyWith(zenMaruGothicFont)
+private val smartFontUiTypography = typographyWith(smartFontUiFont)
+
+/** フォント設定に対応するタイポグラフィ。起動時に一度だけ生成したものを使い回す。 */
+internal fun typographyFor(fontMode: FontMode): Typography = when (fontMode) {
+    FontMode.ZEN_MARU -> zenMaruGothicTypography
+    FontMode.SMART_FONT_UI -> smartFontUiTypography
 }
 
 internal val lightColorScheme = lightColorScheme(
@@ -177,6 +201,7 @@ internal fun colorSchemeFor(themeMode: ThemeMode): ColorScheme {
 @Composable
 fun YamaokayaTheme(
     themeMode: ThemeMode = ThemeMode.DARK,
+    fontMode: FontMode = FontMode.SMART_FONT_UI,
     content: @Composable () -> Unit
 ) {
     val colorScheme = colorSchemeFor(themeMode)
@@ -195,7 +220,7 @@ fun YamaokayaTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = appTypography,
+        typography = typographyFor(fontMode),
         content = content
     )
 }

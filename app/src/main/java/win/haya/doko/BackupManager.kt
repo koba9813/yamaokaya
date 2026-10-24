@@ -472,6 +472,7 @@ internal object BackupManager {
 
     private fun settingsToJson(settings: AppSettings): JSONObject = JSONObject()
         .put("theme", settings.themeMode.storageKey)
+        .put("font", settings.fontMode.storageKey)
         .put("proximityNotification", settings.proximityNotificationEnabled)
         .put("trackerNotification", settings.trackerNotificationEnabled)
         .put("locationUpdateInterval", settings.locationUpdateIntervalSeconds)
@@ -488,7 +489,8 @@ internal object BackupManager {
                     SettingsRepository.DEFAULT_LOCATION_INTERVAL_SECONDS
                 )
             ),
-            themeMode = ThemeMode.fromStorageKey(json.optString("theme").ifEmpty { null })
+            themeMode = ThemeMode.fromStorageKey(json.optString("theme").ifEmpty { null }),
+            fontMode = FontMode.fromStorageKey(json.optString("font").ifEmpty { null })
         )
     }
 

@@ -70,7 +70,6 @@ internal fun SettingsPage(
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
-    val uriHandler = LocalUriHandler.current
     val coroutineScope = rememberCoroutineScope()
     var settings by remember { mutableStateOf(appSettings) }
     var updateState by remember { mutableStateOf<UpdateFlowState>(UpdateFlowState.Hidden) }
@@ -110,109 +109,28 @@ internal fun SettingsPage(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            ThemeSection(
-                selected = settings.themeMode,
+            AppearanceSection(
+                themeMode = settings.themeMode,
+                fontMode = settings.fontMode,
                 onThemeSelected = { mode ->
                     settings = settings.copy(themeMode = mode)
+                    onSettingsChanged(settings)
+                },
+                onFontSelected = { mode ->
+                    settings = settings.copy(fontMode = mode)
                     onSettingsChanged(settings)
                 }
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            SectionTitle(title = "位置情報")
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge
-            ) {
-                Column {
-                    ListItem(
-                        headlineContent = { Text("位置情報の権限") },
-                        supportingContent = { Text("OS の設定から変更できます") },
-                        leadingContent = {
-                            Icon(
-                                imageVector = Icons.Filled.LocationOn,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        },
-                        trailingContent = {
-                            OutlinedButton(
-                                onClick = {
-                                    val intent = Intent(
-                                        android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-                                    ).apply {
-                                        data = Uri.fromParts("package", context.packageName, null)
-                                    }
-                                    context.startActivity(intent)
-                                }
-                            ) {
-                                Text("開く")
-                            }
-                        }
-                    )
-                    HorizontalDivider()
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "位置情報の更新間隔",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "${settings.locationUpdateIntervalSeconds} 秒ごとに更新",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SettingsRepository.LOCATION_UPDATE_INTERVAL_OPTIONS.forEach { sec ->
-                                FilterChip(
-                                    selected = settings.locationUpdateIntervalSeconds == sec,
-                                    onClick = {
-                                        settings = settings.copy(locationUpdateIntervalSeconds = sec)
-                                        onSettingsChanged(settings)
-                                    },
-                                    label = { Text("${sec}s") }
-                                )
-                            }
-                        }
-                    }
+            LocationNotificationSection(
+                settings = settings,
+                onSettingsChanged = { updated ->
+                    settings = updated
+                    onSettingsChanged(updated)
                 }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            SectionTitle(title = "通知")
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge
-            ) {
-                Column {
-                    SwitchItem(
-                        icon = Icons.Filled.Notifications,
-                        iconTint = MaterialTheme.colorScheme.primary,
-                        title = "接近通知",
-                        body = "山岡家の 50m 以内に入ると通知",
-                        checked = settings.proximityNotificationEnabled,
-                        onCheckedChange = {
-                            settings = settings.copy(proximityNotificationEnabled = it)
-                            onSettingsChanged(settings)
-                        }
-                    )
-                    HorizontalDivider()
-                    SwitchItem(
-                        icon = Icons.Filled.Notifications,
-                        iconTint = MaterialTheme.colorScheme.secondary,
-                        title = "常時通知（距離トラッカー）",
-                        body = "通知バーに最寄り店舗の距離を常時表示",
-                        checked = settings.trackerNotificationEnabled,
-                        onCheckedChange = {
-                            settings = settings.copy(trackerNotificationEnabled = it)
-                            onSettingsChanged(settings)
-                        }
-                    )
-                }
-            }
+            )
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -226,47 +144,8 @@ internal fun SettingsPage(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            SectionTitle(title = "アプリ情報")
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge
-            ) {
-                Column {
-                    ListItem(
-                        headlineContent = { Text("バージョン") },
-                        trailingContent = {
-                            Text(
-                                text = getAppVersionName(context).removePrefix("V."),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    )
-                    HorizontalDivider()
-                    ListItem(
-                        headlineContent = { Text("登録店舗数") },
-                        trailingContent = {
-                            Text(
-                                text = "${YamaokayaFinder.getRegisteredShops().size} 店舗",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    )
-                    HorizontalDivider()
-                    LinkItem(
-                        icon = Icons.Filled.Star,
-                        iconTint = MaterialTheme.colorScheme.primary,
-                        title = "GitHub リポジトリ",
-                        onClick = { uriHandler.openUri("https://github.com/koba9813/yamaokaya") }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            UpdateSection(
-                state = updateState,
+            AppSection(
+                updateState = updateState,
                 onCheckUpdate = {
                     updateState = UpdateFlowState.Checking
                     coroutineScope.launch {
@@ -287,63 +166,7 @@ internal fun SettingsPage(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            SectionTitle(title = "開発者")
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge
-            ) {
-                Column {
-                    LinkItem(
-                        icon = Icons.Filled.Star,
-                        iconTint = MaterialTheme.colorScheme.primary,
-                        title = "koba9813",
-                        body = "GitHub @koba9813",
-                        onClick = { uriHandler.openUri("https://github.com/koba9813") }
-                    )
-                    HorizontalDivider()
-                    LinkItem(
-                        icon = Icons.Filled.Info,
-                        iconTint = MaterialTheme.colorScheme.tertiary,
-                        title = "Special Thanks",
-                        body = "Photo by Sagara",
-                        onClick = {}
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            SectionTitle(title = "フィードバック")
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge
-            ) {
-                Column {
-                    LinkItem(
-                        icon = Icons.Filled.Info,
-                        iconTint = MaterialTheme.colorScheme.secondary,
-                        title = "GitHub Issue を作成",
-                        body = "バグ報告や機能リクエストはこちらへ",
-                        onClick = { uriHandler.openUri("https://github.com/koba9813/yamaokaya/issues/new") }
-                    )
-                    HorizontalDivider()
-                    LinkItem(
-                        icon = Icons.Filled.Email,
-                        iconTint = MaterialTheme.colorScheme.tertiary,
-                        title = "メールで送る",
-                        body = "Yamaokaya is Doko - 意見・要望",
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_SENDTO).apply {
-                                data = Uri.parse("mailto:")
-                                putExtra(Intent.EXTRA_SUBJECT, "Yamaokaya is Doko - 意見・要望")
-                            }
-                            if (intent.resolveActivity(context.packageManager) != null) {
-                                context.startActivity(intent)
-                            }
-                        }
-                    )
-                }
-            }
+            SupportSection()
 
             Spacer(modifier = Modifier.height(28.dp))
         }
@@ -412,11 +235,10 @@ private fun LinkItem(
 }
 
 @Composable
-private fun UpdateSection(
+private fun UpdateCard(
     state: UpdateFlowState,
     onCheckUpdate: () -> Unit
 ) {
-    SectionTitle(title = "アップデート")
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge
@@ -461,18 +283,83 @@ private fun UpdateSection(
 }
 
 @Composable
-private fun ThemeSection(
+private fun AppSection(
+    updateState: UpdateFlowState,
+    onCheckUpdate: () -> Unit
+) {
+    val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
+
+    SectionTitle(title = "アプリ")
+    UpdateCard(state = updateState, onCheckUpdate = onCheckUpdate)
+    Spacer(modifier = Modifier.height(12.dp))
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge
+    ) {
+        Column {
+            ListItem(
+                headlineContent = { Text("バージョン") },
+                trailingContent = {
+                    Text(
+                        text = getAppVersionName(context),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            )
+            HorizontalDivider()
+            ListItem(
+                headlineContent = { Text("登録店舗数") },
+                trailingContent = {
+                    Text(
+                        text = "${YamaokayaFinder.getRegisteredShops().size} 店舗",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            )
+            HorizontalDivider()
+            LinkItem(
+                icon = Icons.Filled.Star,
+                iconTint = MaterialTheme.colorScheme.primary,
+                title = "GitHub リポジトリ",
+                onClick = { uriHandler.openUri("https://github.com/koba9813/yamaokaya") }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AppearanceSection(
+    themeMode: ThemeMode,
+    fontMode: FontMode,
+    onThemeSelected: (ThemeMode) -> Unit,
+    onFontSelected: (FontMode) -> Unit
+) {
+    SectionTitle(title = "表示")
+    ThemeCard(selected = themeMode, onThemeSelected = onThemeSelected)
+    Spacer(modifier = Modifier.height(12.dp))
+    FontCard(selected = fontMode, onFontSelected = onFontSelected)
+}
+
+@Composable
+private fun ThemeCard(
     selected: ThemeMode,
     onThemeSelected: (ThemeMode) -> Unit
 ) {
-    SectionTitle(title = "テーマ")
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "アプリ全体の配色を切り替えます",
+                text = "テーマ",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "アプリ全体の配色",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -493,6 +380,257 @@ private fun ThemeSection(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+/**
+ * フォント選択カード。各フォントで「あアA」を描画し、見た目の違いが分かるようにする。
+ */
+@Composable
+private fun FontCard(
+    selected: FontMode,
+    onFontSelected: (FontMode) -> Unit
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "フォント",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "アプリ全体の文字フォント",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                FontMode.entries.forEach { mode ->
+                    FontOption(
+                        mode = mode,
+                        selected = selected == mode,
+                        onClick = { onFontSelected(mode) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = selected.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun LocationNotificationSection(
+    settings: AppSettings,
+    onSettingsChanged: (AppSettings) -> Unit
+) {
+    val context = LocalContext.current
+
+    SectionTitle(title = "通知と位置情報")
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge
+    ) {
+        Column {
+            ListItem(
+                headlineContent = { Text("位置情報の権限") },
+                supportingContent = { Text("OS の設定から変更できます") },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Filled.LocationOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                trailingContent = {
+                    OutlinedButton(
+                        onClick = {
+                            val intent = Intent(
+                                android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                            ).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                            }
+                            context.startActivity(intent)
+                        }
+                    ) {
+                        Text("開く")
+                    }
+                }
+            )
+            HorizontalDivider()
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "位置情報の更新間隔",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "${settings.locationUpdateIntervalSeconds} 秒ごとに更新",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SettingsRepository.LOCATION_UPDATE_INTERVAL_OPTIONS.forEach { sec ->
+                        FilterChip(
+                            selected = settings.locationUpdateIntervalSeconds == sec,
+                            onClick = {
+                                onSettingsChanged(settings.copy(locationUpdateIntervalSeconds = sec))
+                            },
+                            label = { Text("${sec}s") }
+                        )
+                    }
+                }
+            }
+            HorizontalDivider()
+            SwitchItem(
+                icon = Icons.Filled.Notifications,
+                iconTint = MaterialTheme.colorScheme.primary,
+                title = "接近通知",
+                body = "山岡家の 50m 以内に入ると通知",
+                checked = settings.proximityNotificationEnabled,
+                onCheckedChange = {
+                    onSettingsChanged(settings.copy(proximityNotificationEnabled = it))
+                }
+            )
+            HorizontalDivider()
+            SwitchItem(
+                icon = Icons.Filled.Notifications,
+                iconTint = MaterialTheme.colorScheme.secondary,
+                title = "常時通知（距離トラッカー）",
+                body = "通知バーに最寄り店舗の距離を常時表示",
+                checked = settings.trackerNotificationEnabled,
+                onCheckedChange = {
+                    onSettingsChanged(settings.copy(trackerNotificationEnabled = it))
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SupportSection() {
+    val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
+
+    SectionTitle(title = "サポート")
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge
+    ) {
+        Column {
+            LinkItem(
+                icon = Icons.Filled.Info,
+                iconTint = MaterialTheme.colorScheme.secondary,
+                title = "GitHub Issue を作成",
+                body = "バグ報告や機能リクエストはこちらへ",
+                onClick = { uriHandler.openUri("https://github.com/koba9813/yamaokaya/issues/new") }
+            )
+            HorizontalDivider()
+            LinkItem(
+                icon = Icons.Filled.Email,
+                iconTint = MaterialTheme.colorScheme.tertiary,
+                title = "メールで送る",
+                body = "Yamaokaya is Doko - 意見・要望",
+                onClick = {
+                    val intent = Intent(Intent.ACTION_SENDTO).apply {
+                        data = Uri.parse("mailto:")
+                        putExtra(Intent.EXTRA_SUBJECT, "Yamaokaya is Doko - 意見・要望")
+                    }
+                    if (intent.resolveActivity(context.packageManager) != null) {
+                        context.startActivity(intent)
+                    }
+                }
+            )
+            HorizontalDivider()
+            LinkItem(
+                icon = Icons.Filled.Star,
+                iconTint = MaterialTheme.colorScheme.primary,
+                title = "koba9813",
+                body = "開発者 / GitHub @koba9813",
+                onClick = { uriHandler.openUri("https://github.com/koba9813") }
+            )
+            HorizontalDivider()
+            LinkItem(
+                icon = Icons.Filled.Info,
+                iconTint = MaterialTheme.colorScheme.tertiary,
+                title = "Special Thanks",
+                body = "Photo by Sagara",
+                onClick = {}
+            )
+        }
+    }
+}
+
+@Composable
+private fun FontOption(
+    mode: FontMode,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val shape = MaterialTheme.shapes.large
+    val fontFamily = fontFamilyFor(mode)
+
+    Column(
+        modifier = modifier
+            .clip(shape)
+            .clickable(onClick = onClick)
+            .border(
+                width = if (selected) 2.dp else 1.dp,
+                color = if (selected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.outlineVariant
+                },
+                shape = shape
+            )
+            .background(
+                if (selected) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+                } else {
+                    Color.Transparent
+                }
+            )
+            .padding(vertical = 12.dp, horizontal = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "あアA",
+            style = MaterialTheme.typography.headlineSmall,
+            fontFamily = fontFamily,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = mode.displayName,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = if (selected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
+            )
+            if (selected) {
+                Spacer(modifier = Modifier.width(2.dp))
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = "選択中",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
         }
     }
 }

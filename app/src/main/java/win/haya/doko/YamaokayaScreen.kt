@@ -506,7 +506,7 @@ private fun ShopContent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "最寄店舗 is ${shop.name}",
+                text = "最寄店舗 is\n${shop.name}",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
