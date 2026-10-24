@@ -14,6 +14,9 @@ import androidx.core.content.ContextCompat
 internal const val NOTIFICATION_CHANNEL_ID = "koko_channel"
 private const val NOTIFICATION_ID = 1001
 
+internal const val UPDATE_NOTIFICATION_CHANNEL_ID = "update_channel"
+private const val UPDATE_NOTIFICATION_ID = 1003
+
 private const val PREFS_TRACKER = "tracker_state"
 private const val KEY_TRACKER_RUNNING = "tracker_running"
 
@@ -29,6 +32,50 @@ internal fun createKokoNotificationChannel(context: Context) {
         context.getSystemService(NotificationManager::class.java)
             .createNotificationChannel(channel)
     }
+}
+
+internal fun createUpdateNotificationChannel(context: Context) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = NotificationChannel(
+            UPDATE_NOTIFICATION_CHANNEL_ID,
+            "アップデート",
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "新しいバージョンがリリースされたときに通知します"
+        }
+        context.getSystemService(NotificationManager::class.java)
+            .createNotificationChannel(channel)
+    }
+}
+
+/** 新しいバージョンが公開されたことを知らせる通知を出す。 */
+@SuppressLint("MissingPermission")
+internal fun sendUpdateNotification(context: Context, versionName: String) {
+    if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+
+    val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        ?: return
+    launchIntent.putExtra(UpdateCheckWorker.EXTRA_CHECK_UPDATE, true)
+    val pendingIntent = PendingIntent.getActivity(
+        context, 1, launchIntent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+
+    val notification = NotificationCompat.Builder(context, UPDATE_NOTIFICATION_CHANNEL_ID)
+        .setSmallIcon(R.drawable.icon)
+        .setContentTitle("Yamaokaya is Doko?")
+        .setContentText("新しいバージョン $versionName が利用できます")
+        .setStyle(
+            NotificationCompat.BigTextStyle().bigText(
+                "新しいバージョン $versionName がリリースされました。タップしてアップデートしてください。"
+            )
+        )
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .setContentIntent(pendingIntent)
+        .setAutoCancel(true)
+        .build()
+
+    NotificationManagerCompat.from(context).notify(UPDATE_NOTIFICATION_ID, notification)
 }
 
 @SuppressLint("MissingPermission")

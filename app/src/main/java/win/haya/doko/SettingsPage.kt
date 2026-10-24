@@ -149,7 +149,12 @@ internal fun SettingsPage(
                 onCheckUpdate = {
                     updateState = UpdateFlowState.Checking
                     coroutineScope.launch {
-                        updateState = checkForUpdate(context)
+                        val result = checkForUpdate(context)
+                        if (result is UpdateFlowState.Available) {
+                            // アプリ内で案内済みとして記録し、通知との重複を防ぐ
+                            UpdateCheckWorker.markVersionNotified(context, result.release.versionName)
+                        }
+                        updateState = result
                     }
                 }
             )

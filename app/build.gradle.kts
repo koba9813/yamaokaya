@@ -12,8 +12,8 @@ android {
         applicationId = "win.haya.doko"
         minSdk = 24
         targetSdk = 35
-        versionCode = 7
-        versionName = "V.beta3.1.1"
+        versionCode = 8
+        versionName = "V.beta3.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -121,6 +121,9 @@ dependencies {
 
     // ViewModel Compose
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    // WorkManager（アップデートの定期チェックと通知）
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     // AndroidX Browser (CustomTabsIntent)
     implementation("androidx.browser:browser:1.8.0")

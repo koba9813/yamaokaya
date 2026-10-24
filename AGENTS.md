@@ -7,7 +7,7 @@
 - リポジトリ: `https://github.com/koba9813/yamaokaya`
 - ブランチ: `main`
 - パッケージ名: `win.haya.doko`
-- 現在のバージョン: `V.beta3.1.1`（`app/build.gradle.kts` の `versionName`、`versionCode = 7`）
+- 現在のバージョン: `V.beta3.2`（`app/build.gradle.kts` の `versionName`、`versionCode = 8`）
 
 ## 技術スタック
 
@@ -26,6 +26,7 @@
 2. `93adc9b` アップデート確認ダイアログを刷新 → その後のコミット群（`688a2e5` 〜 `a653884`）で Liquid Glass（ベータ）・新デザイン・ウィジェットのバリエーションを追加し、V.beta3.2 / V.beta3.2.1 としてリリース
 3. `a14518a` Liquid Glass関連のUI/UXをV.beta3.1の状態に戻す（ウィジェットのバリエーションは維持）
 4. `d1dbfbe` V.beta3.1.1 に更新（versionCode 7）
+5. V.beta3.2 に更新（versionCode 8）— ギャラリー全面刷新、Instagram ストーリー共有、アップデート通知、公式アプリ導線、Information 刷新、コントラスト修正ほか
 
 ### 取り下げ: Liquid Glass（ベータ）
 
@@ -43,6 +44,15 @@
 - 配色は `Color.kt` のトークン → `AppTheme.kt` のカラースキームに集約（`colorSchemeFor(themeMode)`）。設定画面のプレビューも同じスキームを参照
 - ステータスバー / ナビゲーションバーのアイコン色もテーマに追従（`WindowCompat`）
 - 既知の制約: 山岡家テーマの赤い見出しは黒背景でコントラスト 3.6:1（太字見出しとしては可読だが AA 通常テキスト基準は満たさない）
+
+### 実装済み: フォント切り替え
+
+- `FontMode`（Smart Font UI / 丸ゴシック）を設定画面から切り替え、`SharedPreferences`（`app_settings` / `font_mode`）に保存し起動時に復元
+- Smart Font UI = 既定。`res/font/smart_font_ui.otf`。1 ウェイトのみのため、太字は Compose の合成太字（FontSynthesis）に任せる
+- 丸ゴシック = `res/font/zen_maru_gothic_regular.ttf` / `zen_maru_gothic_bold.ttf`（Zen Maru Gothic）
+- フォントは `AppTheme.kt` の `fontFamilyFor` / `typographyFor` に集約し、`YamaokayaTheme(themeMode, fontMode)` でアプリ全体に適用
+- 設定画面のフォント選択プレビュー（「あアA」）も同じフォントファミリーを参照
+- バックアップの `settings.json` に `font` を保存。旧バックアップに項目がない場合は Smart Font UI にフォールバック
 
 ### 実装済み: カメラ / ギャラリー
 
@@ -101,6 +111,45 @@ GitHub Releases から最新 APK を自動確認し、アプリ内でダウン�
 - `app/src/main/java/win/haya/doko/YamaokayaScreen.kt`
 - `app/src/main/java/win/haya/doko/SettingsPage.kt`
 
+### 実装済み: アップデート通知
+
+- WorkManager（`work-runtime-ktx` 2.9.1）で 12 時間ごとに GitHub Releases を定期チェックし、新バージョンがあればアプリの通知（チャンネル「アップデート」）でお知らせ
+- 通知済みのバージョンを `SharedPreferences` に記録し、同じバージョンで重複通知しない（アプリ内ダイアログ表示時にも記録）
+- 通知タップでアプリが起動し、即座にアップデートダイアログを表示（`singleTop` + `onNewIntent`）
+- 起動時の自動チェックは 6 時間間隔に間引き（GitHub API を叩きすぎないため）
+- 関連ファイル: `UpdateCheckWorker.kt` / `NotificationUtils.kt` / `MainActivity.kt`
+
+### 実装済み: ギャラリーの全面刷新
+
+- フルブリードの3列グリッド＋「写真 / 店舗 / お気に入り」の3タブ（SegmentedButton）
+- お気に入り（`PhotoRepository` に永続化）・店舗別アルバム（表紙＋枚数）・月ジャンプ（月チップ＋スクロール）
+- 共有はボトムシート形式（Instagram ストーリー / LINE / X / その他）
+- メイン画面・スタンプラリーのギャラリーボタンは、写真の取り込み（Photo Picker）ではなくギャラリーページへ遷移するように変更（写真の追加はアプリ内カメラのみに）
+- 関連ファイル: `GalleryScreen.kt` / `PhotoRepository.kt` / `ShareWatermark.kt`
+
+### 実装済み: Instagram ストーリー共有と透かし
+
+- 共有画像に「Yamaokaya is Doko?」の透かし（左上から下への縦向き、白文字＋影）
+- Instagram ストーリーは 9:16（1080×1920）のキャンバス画像（ぼかし背景＋中央に写真＋透かし）を生成して共有（9:16 トリミングで透かしが切れないように）
+- 関連ファイル: `ShareWatermark.kt` / `GalleryScreen.kt`
+
+### 実装済み: 山岡家公式アプリへの導線
+
+- メニューボタン（メイン画面「山岡家公式」・チェックイン後）が公式アプリ（`li.yapp.appCC40B910`）を起動。未インストール時は公式メニューページへフォールバック
+- Information ページにも公式サイト・公式アプリ・GitHub へのリンクを追加
+- 関連ファイル: `AppUtils.kt` / `InformationPage.kt`
+
+### 実装済み: Information ページの刷新
+
+- アプリアイコン・バージョン表示のヒーローカード、主な機能、権限の説明、リンク（GitHub / 公式サイト / 公式アプリ）、このアプリについて のセクション構成に刷新
+
+### 修正: コントラストと細かな不具合
+
+- ギャラリー・Information のルートを `Surface` でラップし、アイコン（戻る矢印など）が `LocalContentColor` の黒のままで背景に溶ける問題を修正
+- 距離トラッカー通知とアップデート通知の通知 ID 衝突（どちらも 1002）を修正（アップデート通知は 1003）
+- 非推奨アイコン `Icons.Filled.ExitToApp` → `Icons.AutoMirrored.Filled.ExitToApp` に置換
+- スタンプラリー画面の無処理の LaunchedEffect を削除
+
 ## ビルド環境の注意点
 
 - デバッグ / リリースとも **JBR 21**（`C:\Users\user\.jdks\jbr-21.0.11`）でビルド・実機動作を確認済み（この環境に JDK 17 は未インストール）
@@ -119,18 +168,32 @@ GitHub Releases から最新 APK を自動確認し、アプリ内でダウン�
   .\gradlew.bat --no-daemon :app:testDebugUnitTest
   ```
 
+### ワイヤレスデバッグ
+
+- 実機 moto g66j 5G（Android 16 / SDK 36）で「ワイヤレスデバッグ」を有効化・ペアリング済み
+- 接続は IP・ポートに依存しない mDNS 名で行う:
+  ```powershell
+  $adb = "C:\Users\user\AppData\Local\Android\Sdk\platform-tools\adb.exe"
+  & $adb connect adb-ZY32MCV2Q7-SZtdPX._adb-tls-connect._tcp
+  ```
+- 繋がらないときは `& $adb mdns services` で `_adb-tls-connect._tcp` のポートを確認し、`& $adb connect 192.168.11.8:<ポート>` で接続する（ポートはトグルや再起動で変わる）
+- adb は mDNS でデバイスを見つけても自動再接続しないため、上記 `adb connect` が必要
+- USB とワイヤレスが同時に見えると `more than one device` になるので、`& $adb -s <serial>` か `$env:ANDROID_SERIAL` で指定する
+- 新規ペアリングはスマホ側「ワイヤレスデバッグ → ペア設定コードによるデバイスのペア設定」を開き、`& $adb pair <IP>:<ペアリングポート> <6桁コード>` を実行
+
 ## 主要ファイル構成
 
 ### Android アプリ
 
 - `MainActivity.kt` — エントリポイント、SplashScreen、テーマ適用
-- `AppTheme.kt` — `ThemeMode` ごとのカラースキーム、タイポグラフィ、`YamaokayaTheme`
+- `AppTheme.kt` — `ThemeMode` ごとのカラースキーム、`FontMode` ごとのタイポグラフィ、`YamaokayaTheme`
+- `FontMode.kt` — フォント定義（Smart Font UI / 丸ゴシック）と保存キー
 - `ThemeMode.kt` — テーマ定義（ダーク / ライト / 山岡家）と保存キー
 - `Color.kt` — 各テーマのカラートークン
 - `YamaokayaScreen.kt` — メイン画面、位置情報取得、各種画面遷移、アップデート自動チェック
 - `YamaokayaViewModel.kt` — 位置情報・方位・設定の ViewModel
 - `YamaokayaFinder.kt` — 店舗データ（198店舗）と最寄り店舗計算
-- `SettingsPage.kt` / `SettingsRepository.kt` — 設定画面（テーマ・通知・アップデート）と `AppSettings` の永続化
+- `SettingsPage.kt` / `SettingsRepository.kt` — 設定画面（表示 / 通知と位置情報 / データの引き継ぎ / アプリ / サポートの 5 セクション）と `AppSettings` の永続化
 - `StampRallyScreen.kt` / `StampRepository.kt` — スタンプラリー機能
 - `GalleryScreen.kt` / `PhotoRepository.kt` — 訪問写真ギャラリー
 - `CameraScreen.kt` — CameraX によるアプリ内カメラ
@@ -147,6 +210,15 @@ GitHub Releases から最新 APK を自動確認し、アプリ内でダウン�
 ### Web
 
 - `web/` — PWA 版（Cloudflare Pages 向け）。`web/shops.json` はアプリと同じ店舗データ
+
+## README の運用
+
+- `README.md` は**バージョン番号・リリース固有の情報を含めない**、純粋なアプリ紹介として保つ
+- 機能の追加・変更・削除を行ったときは、README の「主な機能」「必要な権限」「対応環境」「技術スタック」を同じ変更内で更新する
+- 画面構成やデザインを変えたときは `docs/screenshots/` のスクリーンショットも撮り直す
+  - 撮影対象: メイン画面 / 設定画面 / スタンプラリー / 写真ギャラリー
+  - 端末の実画面を `adb exec-out screencap -p` で取得し、README 用に幅 540px 程度へ縮小して保存する
+- リリースノートや変更履歴は README ではなく GitHub Releases に書く
 
 ## リリース・署名
 
@@ -165,6 +237,7 @@ GitHub Releases から最新 APK を自動確認し、アプリ内でダウン�
 3. GitHub Release を作成（タグ `V.beta3.1.1`、アセット名 `Yamaokaya_beta3.1.1.apk`）
 4. **必ず通常リリースとして公開する**（prerelease / draft は `/releases/latest` から見えず、アプリ内アップデートが反応しない）
 5. アプリ内アップデートが動くのは、公開 APK がインストール済みアプリと同じ鍵で署名されている場合のみ（旧鍵の V.beta2.0 以前からは更新不可）
+6. README の機能一覧・スクリーンショットが最新の実装と一致しているか確認する
 
 - 過去のリリース命名: V.beta1.0 Syoyu / V.beta1.1 Miso / V.beta1.2 Shio / V.beta2.0 Karamiso / V.beta3.0 Tokusei Miso / V.beta3.1 / V.beta3.1.1（V.beta3.2 / V.beta3.2.1 は取り下げ済み）
 - `gh` CLI は未インストール。GitHub API を叩く場合は Windows 資格情報マネージャーのトークンを使用（`"protocol=https\`nhost=github.com\`n" | git credential fill`）
@@ -179,9 +252,11 @@ GitHub Releases から最新 APK を自動確認し、アプリ内でダウン�
 - [x] V.beta3.1 としてリリース（versionCode 4、同一署名）
 - [x] ウィジェットのバリエーション追加（コンパクト / ミニマル）
 - [x] V.beta3.2 / V.beta3.2.1（Liquid Glass・新デザイン）の取り下げと V.beta3.1.1 への収束
+- [x] アップデート通知（WorkManager による定期チェック・通知）
+- [x] 最終アップデート確認日時の保存（起動時自動チェックを6時間間隔に間引き）
+- [x] V.beta3.2 としてリリース（versionCode 8、同一署名）
 - [ ] ウィジェット 3 種類の実機確認（配置・サイズ変化・更新）
 - [ ] 「このバージョンをスキップ」機能の追加（毎回ダイアログが出るのを防ぐ）
-- [ ] 最終アップデート確認日時の保存（起動ごとに API を叩きすぎないように）
 - [ ] 山岡家テーマの見出し赤色のコントラスト改善（必要なら `primaryLight` / `primaryYamaokaya` を明るめに調整）
 - [ ] ホーム画面ウィジェットをテーマ配色に追従させるか検討
 - [ ] Web 側と Android 側のバージョン管理・リリースフローの整理

@@ -4,8 +4,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.LocationManager
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -50,7 +48,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -87,38 +84,10 @@ internal fun StampRallyScreen(
 ) {
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
-        // 位置情報の権限があれば最新位置を一度取得して補完する
-        if (hasLocationPermission(context) && currentCoordinates == null) {
-            try {
-                val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-                val lastLocation = locationManager?.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                    ?: locationManager?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-                lastLocation?.let {
-                    // 注: 実際の現在位置は viewModel から渡される currentCoordinates を主とする
-                }
-            } catch (_: SecurityException) { }
-        }
-    }
-
     var pendingShopName by remember { mutableStateOf<String?>(null) }
     var photoRefresh by remember { mutableIntStateOf(0) }
     var cameraShopName by remember { mutableStateOf<String?>(null) }
-    var galleryTargetShop by remember { mutableStateOf<String?>(null) }
     var photoMessage by remember { mutableStateOf<String?>(null) }
-
-    val galleryPickerLauncher = rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        val shop = galleryTargetShop
-        if (uri != null && shop != null) {
-            PhotoRepository.decodeSampledBitmapFromUri(context, uri, 1024)?.let { bitmap ->
-                photoRepository.savePhoto(shop, bitmap)
-                photoRefresh++
-            }
-        }
-        galleryTargetShop = null
-    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -258,14 +227,7 @@ internal fun StampRallyScreen(
                             permissionLauncher.launch(Manifest.permission.CAMERA)
                         }
                     },
-                    onGalleryClick = { name ->
-                        galleryTargetShop = name
-                        galleryPickerLauncher.launch(
-                            androidx.activity.result.PickVisualMediaRequest(
-                                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
-                            )
-                        )
-                    }
+                    onOpenGallery = onOpenGallery
                 )
             }
 
@@ -336,14 +298,7 @@ internal fun StampRallyScreen(
                             permissionLauncher.launch(Manifest.permission.CAMERA)
                         }
                     },
-                    onGalleryClick = {
-                        galleryTargetShop = name
-                        galleryPickerLauncher.launch(
-                            androidx.activity.result.PickVisualMediaRequest(
-                                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
-                            )
-                        )
-                    }
+                    onOpenGallery = onOpenGallery
                 )
             }
         }
@@ -410,7 +365,7 @@ private fun NearestShopCard(
     photoRepository: PhotoRepository,
     photoRefresh: Int,
     onCameraClick: (String) -> Unit,
-    onGalleryClick: (String) -> Unit
+    onOpenGallery: () -> Unit
 ) {
     val latestPhoto = remember(photoRefresh, shop?.name) {
         shop?.name?.let { photoRepository.getLatestPhoto(it) }
@@ -477,10 +432,10 @@ private fun NearestShopCard(
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        IconButton(onClick = { onGalleryClick(shop.name) }) {
+                        IconButton(onClick = onOpenGallery) {
                             Icon(
                                 imageVector = Icons.Filled.PhotoLibrary,
-                                contentDescription = "ギャラリーから選ぶ",
+                                contentDescription = "ギャラリーを開く",
                                 tint = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         }
@@ -573,7 +528,7 @@ private fun ShopRowCard(
     isNearby: Boolean,
     photoBitmap: androidx.compose.ui.graphics.ImageBitmap?,
     onCameraClick: () -> Unit,
-    onGalleryClick: () -> Unit
+    onOpenGallery: () -> Unit
 ) {
     val isVisited = count > 0
     Card(
@@ -659,10 +614,10 @@ private fun ShopRowCard(
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                IconButton(onClick = onGalleryClick) {
+                IconButton(onClick = onOpenGallery) {
                     Icon(
                         imageVector = Icons.Filled.PhotoLibrary,
-                        contentDescription = "$name のギャラリーから選ぶ",
+                        contentDescription = "$name のギャラリーを開く",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

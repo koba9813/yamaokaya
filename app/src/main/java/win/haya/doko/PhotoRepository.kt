@@ -28,6 +28,28 @@ internal class PhotoRepository(context: Context) {
 
     private val dateFormat = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.JAPAN)
 
+    // お気に入り写真の ID（shopName|timestampMillis）を SharedPreferences に保存する。
+    private val favoritePrefs = context.getSharedPreferences("gallery_favorites", Context.MODE_PRIVATE)
+
+    /** お気に入り登録されている写真の ID 一覧を返す。 */
+    fun favoriteIds(): Set<String> =
+        favoritePrefs.getStringSet(KEY_FAVORITES, emptySet()) ?: emptySet()
+
+    fun isFavorite(entry: PhotoEntry): Boolean =
+        favoriteIds().contains(favoriteId(entry))
+
+    /** 写真をお気に入り登録／解除する。 */
+    fun setFavorite(entry: PhotoEntry, favorite: Boolean) {
+        val id = favoriteId(entry)
+        val current = favoriteIds().toMutableSet()
+        val changed = if (favorite) current.add(id) else current.remove(id)
+        if (changed) {
+            favoritePrefs.edit().putStringSet(KEY_FAVORITES, current).apply()
+        }
+    }
+
+    private fun favoriteId(entry: PhotoEntry): String = "${entry.shopName}|${entry.timestampMillis}"
+
     fun savePhoto(shopName: String, bitmap: Bitmap): PhotoEntry {
         val shopDir = ensureShopDir(shopName)
         val timestamp = System.currentTimeMillis()
@@ -190,6 +212,7 @@ internal class PhotoRepository(context: Context) {
     companion object {
         /** 店舗フォルダー名の最大長（ファイルシステムの名前長超過を防ぐ）。 */
         private const val MAX_DIR_NAME_LENGTH = 60
+        private const val KEY_FAVORITES = "ids"
         fun decodeSampledBitmapFromUri(context: Context, uri: Uri, maxDimension: Int = 1024): Bitmap? {
             val resolver = context.contentResolver
             val boundsOptions = BitmapFactory.Options().apply {

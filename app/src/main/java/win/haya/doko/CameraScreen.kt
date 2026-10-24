@@ -9,17 +9,19 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cameraswitch
@@ -44,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -78,7 +81,6 @@ internal fun CameraCaptureScreen(
         .build()
     }
 
-    // Bind camera when lensFacing changes
     LaunchedEffect(flashMode) {
         imageCapture.flashMode = flashMode
     }
@@ -123,24 +125,35 @@ internal fun CameraCaptureScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        // Top bar
+        // 上部：閉じる・店舗名・フラッシュ・カメラ切替
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
-                .align(Alignment.TopCenter),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .statusBarsPadding()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             IconButton(onClick = onClose) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "閉じる", tint = Color.White)
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "閉じる",
+                    tint = Color.White
+                )
             }
+
             Text(
                 text = shopName,
                 color = Color.White,
                 style = MaterialTheme.typography.titleMedium,
-                maxLines = 1
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(50))
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
             )
+
             IconButton(onClick = {
                 flashMode = when (flashMode) {
                     ImageCapture.FLASH_MODE_OFF -> ImageCapture.FLASH_MODE_ON
@@ -159,32 +172,37 @@ internal fun CameraCaptureScreen(
                     tint = Color.White
                 )
             }
-        }
 
-        // Switch camera button
-        IconButton(
-            onClick = {
-                lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
-                    CameraSelector.LENS_FACING_FRONT
-                } else {
-                    CameraSelector.LENS_FACING_BACK
+            IconButton(
+                onClick = {
+                    lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
+                        CameraSelector.LENS_FACING_FRONT
+                    } else {
+                        CameraSelector.LENS_FACING_BACK
+                    }
                 }
-            },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 72.dp, end = 12.dp)
-        ) {
-            Icon(Icons.Filled.Cameraswitch, contentDescription = "カメラ切替", tint = Color.White)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Cameraswitch,
+                    contentDescription = "カメラ切替",
+                    tint = Color.White
+                )
+            }
         }
 
-        // Capture button
-        Box(
+        // 下部：シャッターボタン
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 48.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (isCapturing) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(72.dp))
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier.size(76.dp)
+                )
             } else {
                 IconButton(
                     onClick = {
@@ -212,13 +230,13 @@ internal fun CameraCaptureScreen(
                             }
                         )
                     },
-                    modifier = Modifier
-                        .size(80.dp)
-                        .background(Color.White.copy(alpha = 0.2f), CircleShape)
+                    modifier = Modifier.size(84.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(64.dp)
+                            .size(84.dp)
+                            .border(3.dp, Color.White.copy(alpha = 0.9f), CircleShape)
+                            .padding(6.dp)
                             .background(Color.White, CircleShape)
                     )
                 }
@@ -231,7 +249,7 @@ internal fun CameraCaptureScreen(
                 color = Color.White,
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .background(Color.Black.copy(alpha = 0.6f))
+                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
                     .padding(16.dp)
             )
         }

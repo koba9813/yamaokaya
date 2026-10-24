@@ -49,7 +49,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -110,7 +110,8 @@ private fun formatDistance(meters: Float): String = if (meters < 1000f) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun YamaokayaScreen(
-    viewModel: YamaokayaViewModel
+    viewModel: YamaokayaViewModel,
+    updateCheckRequest: Int = 0
 ) {
     val context = LocalContext.current
 
@@ -163,7 +164,10 @@ internal fun YamaokayaScreen(
                 currentCoordinates = viewModel.currentCoordinates.value,
                 shopNames = shopNames,
                 onClose = { showStampRally = false },
-                onOpenGallery = { showGallery = true }
+                onOpenGallery = {
+                    showStampRally = false
+                    showGallery = true
+                }
             )
             return
         }
@@ -225,11 +229,28 @@ internal fun YamaokayaScreen(
     }
 
     LaunchedEffect(splashFinished) {
-        if (splashFinished && updateState == UpdateFlowState.Hidden) {
+        if (splashFinished &&
+            updateState == UpdateFlowState.Hidden &&
+            UpdateCheckWorker.shouldRunAutoCheck(context)
+        ) {
             delay(1200)
+            val result = checkForUpdate(context)
+            UpdateCheckWorker.markAutoCheckDone(context)
+            if (result is UpdateFlowState.Available) {
+                updateState = result
+                // アプリ内で案内済みとして記録し、通知との重複を防ぐ
+                UpdateCheckWorker.markVersionNotified(context, result.release.versionName)
+            }
+        }
+    }
+
+    // アップデート通知をタップして起動したときは、即座にアップデートを確認する
+    LaunchedEffect(updateCheckRequest) {
+        if (updateCheckRequest > 0 && updateState == UpdateFlowState.Hidden) {
             val result = checkForUpdate(context)
             if (result is UpdateFlowState.Available) {
                 updateState = result
+                UpdateCheckWorker.markVersionNotified(context, result.release.versionName)
             }
         }
     }
@@ -357,11 +378,11 @@ internal fun YamaokayaScreen(
                     AtShopContent(
                         shop = shop,
                         stampRepository = stampRepository,
-                        photoRepository = photoRepository,
                         checkInFeedbackMessage = checkInFeedbackMessage,
                         onCheckInFeedbackMessage = { checkInFeedbackMessage = it },
                         onOpenMap = { openGoogleMaps(context, shop.coordinates) },
-                        onOpenCamera = { name -> cameraShop = name }
+                        onOpenCamera = { name -> cameraShop = name },
+                        onOpenGallery = { showGallery = true }
                     )
                 }
 
@@ -385,7 +406,7 @@ internal fun YamaokayaScreen(
                         onOpenMap = {
                             openGoogleMaps(context, shop.coordinates)
                         },
-                        onOpenMenu = { openMenuInAppBrowser(context) }
+                        onOpenMenu = { openYamaokayaMenu(context) }
                     )
                 }
             }
@@ -538,12 +559,12 @@ private fun ShopContent(
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.ExitToApp,
+                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.padding(start = 8.dp))
-                        Text("メニュー")
+                        Text("山岡家公式")
                     }
                 }
             }
@@ -701,11 +722,11 @@ private fun SpecialRangeCard(shop: ShopInfo) {
 private fun AtShopContent(
     shop: ShopInfo,
     stampRepository: StampRepository,
-    photoRepository: PhotoRepository,
     checkInFeedbackMessage: String?,
     onCheckInFeedbackMessage: (String?) -> Unit,
     onOpenMap: () -> Unit,
-    onOpenCamera: (String) -> Unit
+    onOpenCamera: (String) -> Unit,
+    onOpenGallery: () -> Unit
 ) {
     val context = LocalContext.current
     val isCheckedIn = stampRepository.getRemainingCooldownMillis(shop.name) > 0L
@@ -714,16 +735,6 @@ private fun AtShopContent(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) onOpenCamera(shop.name)
-    }
-
-    val galleryPickerLauncher = rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        if (uri != null) {
-            PhotoRepository.decodeSampledBitmapFromUri(context, uri, 1024)?.let { bitmap ->
-                photoRepository.savePhoto(shop.name, bitmap)
-            }
-        }
     }
 
     Column(
@@ -742,19 +753,19 @@ private fun AtShopContent(
 
         if (isCheckedIn) {
             Button(
-                onClick = { openMenuInAppBrowser(context) },
+                onClick = { openYamaokayaMenu(context) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Filled.ExitToApp,
+                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "メニューを見る",
+                    text = "山岡家公式",
                     style = MaterialTheme.typography.titleMedium
                 )
             }
@@ -814,11 +825,7 @@ private fun AtShopContent(
             }
 
             OutlinedButton(
-                onClick = { galleryPickerLauncher.launch(
-                    androidx.activity.result.PickVisualMediaRequest(
-                        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
-                    )
-                ) },
+                onClick = onOpenGallery,
                 modifier = Modifier.weight(1f)
             ) {
                 Icon(
